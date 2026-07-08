@@ -154,3 +154,28 @@ void LCD_ShowString(uint16_t x, uint16_t y, const char *s, uint16_t fc, uint16_t
 {
     while (*s) { LCD_ShowChar(x, y, *s, fc, bc, size); x += size / 2; s++; }
 }
+
+void LCD_WriteLine(uint16_t y, const uint8_t *data, uint16_t len)
+{
+    lcd_window(0, y, LCD_W - 1, y);
+    CS_LO();
+    DMA_SPI1_Tx(data, len);
+    CS_HI();
+}
+
+/* ---- 流式写入: 单次窗口设置, 连续 DMA 传输整屏 ---- */
+void LCD_WriteBegin(void)
+{
+    lcd_window(0, 0, LCD_W - 1, LCD_H - 1);
+    CS_LO();
+}
+
+void LCD_WriteStreamLine(const uint8_t *data, uint16_t len)
+{
+    DMA_SPI1_Tx(data, len);
+}
+
+void LCD_WriteEnd(void)
+{
+    CS_HI();
+}

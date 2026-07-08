@@ -190,7 +190,7 @@
             <hadIRAM2>0</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
-            <useUlib>0</useUlib>
+            <useUlib>1</useUlib>
             <EndSel>0</EndSel>
             <uLtcg>0</uLtcg>
             <nSecure>0</nSecure>
@@ -337,10 +337,10 @@
             <v6WtE>0</v6WtE>
             <v6Rtti>0</v6Rtti>
             <VariousControls>
-              <MiscControls></MiscControls>
+              <MiscControls>--cpp11</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\GuiLite</IncludePath>
+              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\GuiLite;..\\Astra\\hal;..\\Astra\\astra;..\\Astra\\astra\\config;..\\Astra\\astra\\ui;..\\Astra\\astra\\ui\\element\\page</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -532,12 +532,37 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>GuiLite</GroupName>
+          <GroupName>Astra</GroupName>
           <Files>
             <File>
-              <FileName>GuiLiteAdapter.cpp</FileName>
+              <FileName>hal.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\GuiLite\GuiLiteAdapter.cpp</FilePath>
+              <FilePath>..\Astra\hal\hal.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>hal_port.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\hal\hal_port.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>astra_logo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\astra_logo.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>astra_rocket.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\astra_rocket.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>launcher.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\ui\launcher.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>item.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\ui\element\page\item.cpp</FilePath>
             </File>
           </Files>
         </Group>

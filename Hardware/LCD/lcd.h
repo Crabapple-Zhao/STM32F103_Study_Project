@@ -34,6 +34,14 @@ void LCD_DrawCircle(uint16_t x0, uint16_t y0, uint16_t r, uint16_t color);
 void LCD_ShowChar(uint16_t x, uint16_t y, char c, uint16_t fc, uint16_t bc, uint8_t size);
 void LCD_ShowString(uint16_t x, uint16_t y, const char *s, uint16_t fc, uint16_t bc, uint8_t size);
 
+/* 逐行写入 RGB565 数据 (供 Astra UI 1bpp→RGB565 刷新用) */
+void LCD_WriteLine(uint16_t y, const uint8_t *data, uint16_t len);
+
+/* 流式写入: 单次窗口设置, 连续 DMA 传输整屏 (性能优化) */
+void LCD_WriteBegin(void);
+void LCD_WriteStreamLine(const uint8_t *data, uint16_t len);
+void LCD_WriteEnd(void);
+
 #ifdef __cplusplus
 }
 #endif

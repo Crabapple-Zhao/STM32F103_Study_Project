@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-07
+
+### Added
+- **Astra UI 框架移植** — 从 `astra-ui-stm32` 移植轻量级菜单 UI 框架到 1.8寸 ST7735S 彩色屏
+- `Astra/hal/hal.h/cpp` — HAL 抽象基类 + 默认实现
+- `Astra/hal/hal_port.h/cpp` — STM32F103 核心移植层：1bpp 虚拟显存 (2560B) → RGB565 逐行转换 → SPI+DMA 推送
+- `Astra/astra/config/config.h` — UI 配置适配 128x160 屏幕 + 8x16 字体参数
+- `Astra/astra/ui/launcher.h/cpp` — 调度器（页面切换/动画/摄像机系统）
+- `Astra/astra/ui/element/page/item.h/cpp` — 菜单/选择器/摄像机类
+- `Astra/astra/astra_logo.h/cpp` — Logo 启动动画
+- `Astra/astra/astra_rocket.h/cpp` — 启动入口：菜单树定义（Home/Settings/About/Tools + 子菜单）+ 非阻塞 `astraLoop()` 接口
+- `Hardware/LCD/lcd.c` 新增 `LCD_WriteLine()` / `LCD_WriteBegin()` / `LCD_StreamLine()` / `LCD_WriteEnd()` — 逐行 RGB565 写入接口，供 hal_port 桥接调用
+- 编码器替代按键作为 UI 导航：旋转=上下导航，SW 短按=进入/确认，SW 长按=返回
+- 串口启动输出版本号 `v0.3.0`，主循环输出 FPS 帧率
+- 菜单树：Home(-Status/-Uptime/-Memory)、Settings(-Brightness/-Contrast/-Reset)、About(-Astra UI/-STM32F103/-ST7735S)、Tools(-Encoder/-LCD Test/-LED Blink/-SPI DMA/-Key Scan)
+
+### Changed
+- `User/main.cpp` 重写为 Astra UI 主循环（`astraCoreInit()` + `astraLoop()`）
+- Keil 工程编译选项改为 `--cpp11`，Astra 组替换原 GuiLite 组
+- **启用 MicroLib**（`<useUlib>1</useUlib>`）— 消除标准 C 库 semihosting `BKPT #0xAB` 导致的 HardFault
+- `Startup/startup_stm32f103xb.s` Heap_Size 从 0x2000 (8KB) 增至 0x3000 (12KB)，适配 19 个 Menu 对象的动态分配
+- `Hardware/LCD/lcdfont.h` 中文字模部分用 `#if 0` 排除（`--cpp11` 下 GBK 字符串类型检查冲突，且 lcd.c 未使用）
+
+### Fixed
+- **Semihosting HardFault** — 标准 C 库（非 MicroLib）使用 semihosting `BKPT #0xAB` 进行 I/O，无调试器半主机支持时触发 HardFault。通过 STM32CubeProgrammer `-hf` HardFault 分析器 + `-r32fast` 异常栈帧读取定位故障指令，启用 MicroLib 解决
+- **drawLogo 卡死** — `drawLogo()` 的浮点动画 `yBackGround == 0 - screenHeight - 1` 精确比较永不满足 + 每帧全屏 drawBox 浮点运算过重，暂跳过启动动画
+- **exitAnimation 越界写内存** — `item.h` 中 `bufferLen` 为 `uint8_t` 导致 2560 > 255 溢出，open()/deInit() 时越界写入 17920 字节破坏堆栈引发 BusFault → 改为 `uint32_t`
+- **图标显示乱线条** — `_drawBMP` 格式不匹配，数据是行优先 LSB first（标准 XBM），修正为 `byteIdx = y*((w+7)/8) + x/8, bit = 1<<(x%8)`
+- **点击磁贴卡死** — `popInfo()` 浮点精确比较永不满足导致阻塞循环；open() 失败直接返回不调用 popInfo
+- **编码器过灵敏** — TIM4 四倍频模式每转一格产生 4 个脉冲，之前每个脉冲都触发移动 → 引入累加器阈值 4 才触发一次
+- **ARMCC V5.06 C++11 兼容性** — 逐一修复 ARMCC V5.06 有限 C++11 支持导致的编译错误：
+  - `std::move` 不支持 → 直接传值 (`hal.h`, `item.cpp`)
+  - `[[nodiscard]]` 不支持 → 移除属性 (`item.h`)
+  - `std::vector::data()` 不支持 → `empty() ? nullptr : &v[0]` (`item.cpp`)
+  - `std::vector` initializer list 构造不支持 → 改用 `push_back` 或数组+范围构造 (`item.cpp`, `astra_rocket.cpp`)
+  - `<cstdlib>` 不引入 `srand/rand` 到全局 → 改用 `<stdlib.h>` (`astra_logo.cpp`)
+  - `<cstring>` 不引入 `memset` 到全局 → 添加 `<string.h>` (`hal.cpp`, `hal_port.cpp`)
+  - `ceil`/`floor` 未定义 → 改用 `(int)(... + 0.5f)` / `(int)(...)` (`item.cpp`)
+  - 类内成员初始化不支持 → 添加 `--cpp11` 选项 (`config.h`)
+- `item.cpp` `Selector::destroy()` 补充缺失的 `return true`
+
+### Removed
+- `GuiLite/` 目录 — GuiLite v3.4 渲染引擎（已被 Astra UI 替代）
+
+### Resource Usage (vs v0.2.2)
+| 指标 | v0.2.2 | v0.3.0 | 变化 |
+|------|--------|--------|------|
+| Flash (Code+RO) | ~10.5KB | ~33KB | +22.5KB |
+| RAM (RW+ZI) | ~6.5KB | ~18KB | +11.5KB |
+| 运行帧率 | — | ~23 FPS | — |
+
+---
+
 ## [0.2.2] - 2025-07-07
 
 ### Added
