@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-07-08
+
+### Changed
+- **彻底清理 GuiLite 残留** — `font_ascii_8x16.h` 从 `GuiLite/` 迁移到 `Astra/hal/`，精简为仅保留 `font_8x16_data` 数组（移除 GuiLite 专用的 `LATTICE`/`FONT_INFO` 结构和 `font_8x16_init()`）
+- `hal_port.cpp` 的 include 从 `"../../GuiLite/font_ascii_8x16.h"` 改为 `"font_ascii_8x16.h"`
+- Keil 工程 `IncludePath` 移除 `..\\GuiLite`
+- README 版本号同步为 v0.3.2
+- 串口启动版本号更新为 v0.3.2
+
+### Removed
+- `GuiLite/` 目录彻底删除 — v0.3.0 时仅从 Keil 源文件列表移除未真正删除目录，本次完成清理（`GuiLite.h`/`GuiLite_min.h`/`gfx_types.h`/`GuiLiteAdapter.cpp`/`font_ascii_8x16.h`）
+
+---
+
 ## [0.3.1] - 2026-07-08
 
 ### Added

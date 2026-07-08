@@ -16,7 +16,7 @@
 #include <string>
 
 /* 8x16 ASCII 字体 (行优先 1bpp, 每字节=1行8像素, MSB=左像素) */
-#include "../../GuiLite/font_ascii_8x16.h"
+#include "font_ascii_8x16.h"
 
 /* ---- 1bpp 虚拟显存 ---- */
 /* 格式与 SSD1306 一致: byte_index = x + (y/8)*width, bit = 1<<(y%8) */

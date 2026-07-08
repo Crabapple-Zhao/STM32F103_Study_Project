@@ -1,35 +1,21 @@
 /**
  * @file    font_ascii_8x16.h
- * @brief   8x16 ASCII 字体点阵数据 (0x20~0x7E)，供 GuiLite 使用
+ * @brief   8x16 ASCII 字体点阵数据 (0x20~0x7E)
  *
- * 每个字符 8x16 像素，逐列式，每字节 8 像素（纵向），每字符 16 字节
+ * 每个字符 8x16 像素，行优先 1bpp 格式，每字节 8 像素，每字符 16 字节
+ * 供 Astra UI hal_port.cpp 绘制 ASCII 文字与状态栏使用
  */
 #ifndef FONT_ASCII_8X16_H
 #define FONT_ASCII_8X16_H
 
 #include <stdint.h>
 
-/* LATTICE 和 FONT_INFO 由 GuiLite.h 定义，本头文件必须在 GuiLite.h 之后 include。
- * 如果未 include GuiLite.h，则自行定义最小结构体。 */
-#ifndef GUILITE_CORE_INCLUDE_DISPLAY_H
-struct LATTICE
-{
-    unsigned int            utf8_code;
-    unsigned char           width;
-    const unsigned char*    pixel_gray_array;
-};
-struct FONT_INFO
-{
-    unsigned char   height;
-    unsigned int    count;
-    LATTICE*        lattice_array;
-};
-#endif
-
 /* ASCII 0x20 ~ 0x7E，共 95 个字符 */
 #define FONT_8X16_CHAR_COUNT  95
 #define FONT_8X16_HEIGHT      16
 
+/* 字模数据：font_8x16_data[c - ' '] 取得字符 c 的 16 字节点阵
+ * 每字节 8 像素，MSB 为最左像素，1=前景 */
 static const unsigned char font_8x16_data[][16] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, /*   */
     {0x00,0x00,0x00,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x00,0x00,0x18,0x18,0x00,0x00}, /* ! */
@@ -127,24 +113,5 @@ static const unsigned char font_8x16_data[][16] = {
     {0x00,0x00,0x70,0x10,0x10,0x10,0x10,0x10,0x0C,0x10,0x10,0x10,0x10,0x10,0x70,0x00}, /* } */
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x32,0x4C,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, /* ~ */
 };
-
-/* 构建 GuiLite 所需的 LATTICE 数组 */
-static LATTICE font_8x16_lattice[FONT_8X16_CHAR_COUNT];
-static FONT_INFO font_8x16_info = {
-    FONT_8X16_HEIGHT,
-    FONT_8X16_CHAR_COUNT,
-    font_8x16_lattice
-};
-
-/* 初始化字体：将静态数组关联到 LATTICE 结构 */
-static void font_8x16_init(void)
-{
-    for (int i = 0; i < FONT_8X16_CHAR_COUNT; i++)
-    {
-        font_8x16_lattice[i].utf8_code       = 0x20 + i;
-        font_8x16_lattice[i].width            = 8;
-        font_8x16_lattice[i].pixel_gray_array = font_8x16_data[i];
-    }
-}
 
 #endif /* FONT_ASCII_8X16_H */
