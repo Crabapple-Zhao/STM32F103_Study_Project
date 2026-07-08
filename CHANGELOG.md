@@ -1,85 +1,48 @@
-# 固件版本更新日志 (Changelog)
+# Changelog
 
-**项目名称**: STM32F103C8T6 Dev-Beta 嵌入式开发调试平台
-**硬件平台**: STM32F103C8T6 (Cortex-M3, 72MHz, 64KB Flash, 20KB SRAM)
-**MCU 库**: STM32CubeF1 HAL v1.8.6
-**显示器**: 1.8寸 TFT-LCD (ST7735S, 128×160, 硬件SPI+DMA)
-**当前固件版本**: v0.0.1-beta
+All notable changes to this project will be documented in this file.
 
----
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 📐 目录结构
+## [0.2.0] - 2025-06-14
 
-```
-Dev-beta-STM32F103/
-├── CMSIS/                     # Cortex-M3 CMSIS + 器件头文件
-├── Drivers/                   # MCU 外设驱动
-│   ├── STM32F1xx_HAL_Driver/  #   HAL 库 (Inc + Src)
-│   ├── USART/usart.c+h        #   USART1 PA9/PA10 (HAL UART)
-│   ├── SPI/spi.c+h            #   SPI1 PA5/PA7 (寄存器级, 18MHz)
-│   └── DMA/dma.c+h            #   DMA1_Ch3 (寄存器级, SPI_Tx)
-├── Hardware/                  # 外部器件驱动
-│   ├── LCD/lcd.c+h            #   ST7735S 128×160 (SPI+DMA)
-│   └── LED/led.c+h            #   PC13 心跳灯 (HAL GPIO)
-├── Startup/                   # 启动文件 (startup_stm32f103xb.s)
-├── User/                      # 应用层
-│   ├── main.c+h               #   入口 + Demo
-│   ├── bsp_init.c+h           #   集中初始化 (时钟/LED/USART/LCD)
-│   └── stm32f1xx_hal_conf.h   #   HAL 模块配置
-├── MDK-ARM/                   # Keil5 工程 + 编译产物
-├── Doc/                       # 文档
-├── CHANGELOG.md
-├── README.md
-├── keil_config.json
-└── .gitignore
-```
+### Added
+- GuiLite v3.4 超轻量 GUI 渲染引擎移植到 STM32F103C8T6
+- 8x16 ASCII 字体渲染支持（行优先 1bpp 格式）
+- 无帧缓冲显示模式，通过 EXTERNAL_GFX_OP 回调直接写 LCD
+- `GuiLite/GuiLite_min.h` — 最小化渲染子集（排除控件/消息系统，节省 ~5KB RAM）
+- `GuiLite/GuiLiteAdapter.cpp` — GuiLite 与 LCD 驱动的桥接层
+- `GuiLite/gfx_types.h` — EXTERNAL_GFX_OP 共享类型定义（消除 ODR 违规）
+- `GuiLite/font_ascii_8x16.h` — 8x16 ASCII 字体点阵数据
+- `User/main.cpp` — C++ 入口文件及 GuiLite 测试 UI
+- Keil 工程切换 C++ 编译模式（FileType=8）
 
-## 🔧 引脚分配总表
+### Fixed
+- **C++ 名称修饰导致程序崩溃**：中断处理函数(SysTick_Handler / DMA1_Channel3_IRQHandler)从 main.cpp 移入 bsp_init.c(C 文件)，解决 ARMCC V5 的 extern "C" 无效导致链接器移除中断向量的问题
+- **字体渲染乱码**：重写 draw_lattice 函数，从 GuiLite 原始的列优先灰度格式改为行优先 1bpp 格式，匹配 font_ascii_8x16.h 的实际数据格式
+- **DMA 竞态条件**：修复 DMA_SPI1_Tx / DMA_SPI1_Tx16 在通道使能前未清零 CCR 寄存器的问题
+- **颜色转换错误**：修正 GL_RGB_32_to_16 宏的 ARGB(32bit) -> RGB565(16bit) 提取逻辑
 
-| 引脚 | 功能 | 方向 | 说明 |
-|------|------|------|------|
-| PA0 | BLK | 推挽输出 | TFT 背光 (高电平亮) |
-| PA1 | CS | 推挽输出 | TFT 片选 (低有效) |
-| PA2 | RST | 推挽输出 | TFT 硬件复位 |
-| PA3 | DC | 推挽输出 | TFT 数据/命令 |
-| PA5 | SCK | AF推挽 | SPI1 时钟 (18MHz) |
-| PA7 | MOSI | AF推挽 | SPI1 数据 |
-| PA9 | USART1_TX | AF推挽 | 串口发送 (COM32, 115200) |
-| PA10 | USART1_RX | 浮空输入 | 串口接收 |
-| PC13 | LED | 推挽输出 | 心跳灯 (低电平亮) |
-| PA13 | SWDIO | SWD | ST-LINK |
-| PA14 | SWCLK | SWD | ST-LINK |
+### Changed
+- Heap_Size 从 0x200 (512B) 增至 0x1000 (4KB)，适配 GuiLite 动态分配需求
+- 所有 C 头文件添加 extern "C" 保护（lcd.h / led.h / usart.h / bsp_init.h）
+- DMA 驱动清理调试输出，统一超时处理逻辑
+- 移除无效工程配置：uAC6=0, GUILITE_ON 宏定义
+
+### Resource Usage (vs v0.1.0)
+| 指标 | v0.1.0 | v0.2.0 | 变化 |
+|------|--------|--------|------|
+| Flash (Code+RO) | ~8KB | ~9.9KB | +1.9KB |
+| RAM (RW+ZI) | ~2KB | ~6.5KB | +4.5KB |
 
 ---
 
-## 📄 固件版本演进变更详情
+## [0.1.0] - 2025-06-13
 
-* **v0.0.1** (2026-06-08)
-  * 🏗️ 工程地基 — STM32CubeF1 HAL 全新工程
-    - CMSIS + STM32F1xx_HAL_Driver (STM32CubeF1 v1.8.6)
-    - 启动文件: startup_stm32f103xb.s, system_stm32f1xx.c
-    - Keil MDK-ARM V5 (ARMCC V5.06), 自动化烧录 (STM32CubeProgrammer)
-  * ⚡ 系统时钟: HSE 8MHz → PLL ×9 → 72MHz (HAL RCC)
-  * 📡 USART1: HAL UART, PA9/PA10, 115200bps, uart_puts/putc/puts_hex
-  * 💡 LED: PC13 HAL GPIO, Toggle + SysTick HAL_Delay 1Hz
-  * 🖥️ TFT ST7735S 驱动
-    - 硬件 SPI1 (CPOL=High, CPHA=2Edge, 18MHz, 寄存器直配)
-    - DMA1_Ch3 像素批量填充 (寄存器级, 轮询TC标志)
-    - lcdfont.h 字库: 12/16/24/32px 四套 ASCII 字体
-    - LCD_Fill / DrawPoint / DrawLine / DrawRect / DrawCircle
-    - LCD_ShowChar / ShowString (8×16 ASCII)
-  * 🧱 模块化架构
-    - Drivers (外设) / Hardware (器件) / User (应用) 三层分离
-    - bsp_init 集中初始化 (时钟 + LED + USART + LCD)
-    - 编译: 0 Error 0 Warning, Flash 18.4KB
-  * 🔧 开发环境
-    - COM32, ST-LINK SWD
-    - STM32CubeProgrammer --start 自动启动
-    - SysTick_Handler → HAL_IncTick → HAL_Delay 正常
-
----
-
-## 🔜 计划中 (Roadmap)
-
-* **v0.0.2** — SPI 改为 HAL SPI API, DMA 中断模式
-* **v0.0.3** — 中文字库 + 串口交互终端
+### Added
+- STM32F103C8T6 初始工程框架（HAL 库 v1.8.6）
+- ST7735S TFT LCD 驱动（128x160, SPI+DMA）
+- USART1 串口驱动（PA9/PA10, 115200bps）
+- PC13 LED 驱动
+- Keil MDK-ARM V5 工程配置

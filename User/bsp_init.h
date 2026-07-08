@@ -6,6 +6,14 @@
 
 #include "stm32f1xx_hal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void BSP_Init(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,5 +1,5 @@
 /**
- * @file    lcd.c �� ST7735S HAL SPI1 + DMA
+ * @file    lcd.c �� ST7735S HAL SPI1 + DMA
  *          PA0=BLK, PA1=CS, PA2=RST, PA3=DC, PA5=SCK, PA7=MOSI
  */
 #include "lcd.h"
@@ -76,11 +76,13 @@ void LCD_Init(void)
 
 void LCD_Fill(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
+    static uint16_t dma_color;  /* DMA 必须从静态/全局地址读取，栈变量可能被覆盖 */
     uint32_t n = (uint32_t)(x2 - x1 + 1) * (y2 - y1 + 1);
+    dma_color = color;
     lcd_window(x1, y1, x2, y2);
     CS_LO();
     SPI1->CR1 |= SPI_CR1_DFF;
-    DMA_SPI1_Tx16(&color, (uint16_t)n);
+    DMA_SPI1_Tx16(&dma_color, (uint16_t)n);
     SPI1->CR1 &= ~SPI_CR1_DFF;
     CS_HI();
 }

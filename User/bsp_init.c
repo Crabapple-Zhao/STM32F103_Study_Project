@@ -36,3 +36,13 @@ void BSP_Init(void)
     uart_puts("\r\n=== STM32F103 HAL v0.0.1 ===\r\n");
     LCD_Init();
 }
+
+void SysTick_Handler(void)
+{
+    HAL_IncTick();
+}
+
+void DMA1_Channel3_IRQHandler(void)
+{
+    /* register-level DMA, no HAL callback needed */
+}

@@ -93,7 +93,7 @@
           <SVCSIdString></SVCSIdString>
         </TargetCommonOption>
         <CommonProperty>
-          <UseCPPCompiler>0</UseCPPCompiler>
+          <UseCPPCompiler>1</UseCPPCompiler>
           <RVCTCodeConst>0</RVCTCodeConst>
           <RVCTZI>0</RVCTZI>
           <RVCTOtherData>0</RVCTOtherData>
@@ -134,11 +134,11 @@
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
             <Capability>1</Capability>
-            <DriverSelection>4107</DriverSelection>
+            <DriverSelection>4096</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"$$TOOLKIT_DIR$\ARM\STLink\ST-LINKIII-KEIL_SWO.dll" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src</IncludePath>
+              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\GuiLite</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -505,14 +505,24 @@
           <GroupName>User</GroupName>
           <Files>
             <File>
-              <FileName>main.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\main.c</FilePath>
+              <FileName>main.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\main.cpp</FilePath>
             </File>
             <File>
               <FileName>bsp_init.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\bsp_init.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>GuiLite</GroupName>
+          <Files>
+            <File>
+              <FileName>GuiLiteAdapter.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\GuiLite\GuiLiteAdapter.cpp</FilePath>
             </File>
           </Files>
         </Group>
