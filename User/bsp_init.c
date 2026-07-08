@@ -12,14 +12,18 @@ static void SystemClock_Config(void)
 {
     RCC_OscInitTypeDef osc = {0};
     RCC_ClkInitTypeDef clk = {0};
-    osc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+
+    /* HSE: PD0/OSC_IN + PD1/OSC_OUT, 8MHz 外部晶振 → PLL×9 = 72MHz SYSCLK */
+    osc.OscillatorType = RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_LSE;
     osc.HSEState       = RCC_HSE_ON;
     osc.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+    osc.LSEState       = RCC_LSE_ON;
     osc.HSIState       = RCC_HSI_ON;
     osc.PLL.PLLState   = RCC_PLL_ON;
     osc.PLL.PLLSource  = RCC_PLLSOURCE_HSE;
     osc.PLL.PLLMUL     = RCC_PLL_MUL9;
     HAL_RCC_OscConfig(&osc);
+
     clk.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
                        | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     clk.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;

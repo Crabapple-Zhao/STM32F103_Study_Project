@@ -53,6 +53,56 @@ extern "C" void astraSetStatusBarTitle(const char *title) {
   statusBarTitle[i] = 0;
 }
 
+/* ---- 顶部状态栏右侧图标 ---- */
+#define ICON_GAP 2
+
+/* 电池 16×10 (横向, 左侧正极凸起, 填充约 80%, 偏右 1px) */
+#define BAT_W 16
+#define BAT_H 10
+static const uint8_t icon_battery[] = {
+  /* Row 0 */ 0x00, 0x00,
+  /* Row 1: body top (14px, p2~p15) */ 0xFC, 0xFF,
+  /* Row 2: nub(p0,p1) + wall(p2) + gap + wall(p15) */ 0x07, 0x80,
+  /* Row 3: nub + wall + gap(p3) + fill(p4~p13) + gap(p14) + wall */ 0xF7, 0xBF,
+  /* Row 4 */ 0xF7, 0xBF,
+  /* Row 5 */ 0xF7, 0xBF,
+  /* Row 6 */ 0xF7, 0xBF,
+  /* Row 7: nub + wall + gap + wall */ 0x07, 0x80,
+  /* Row 8: body bottom */ 0xFC, 0xFF,
+  /* Row 9 */ 0x00, 0x00,
+};
+
+/* WiFi 8×8 (待优化) */
+#define WIFI_W 8
+#define WIFI_H 8
+static const uint8_t icon_wifi[] = {
+  0x18, 0x3C, 0x42, 0x18, 0x00, 0x24, 0x18, 0x00
+};
+
+/* SD 卡 8×8 (待优化) */
+#define SD_W 8
+#define SD_H 8
+static const uint8_t icon_sd[] = {
+  0x7E, 0x42, 0x42, 0x42, 0x7E, 0x42, 0x42, 0x7E
+};
+
+/* 绘制小型图标到 canvasBuffer (LSB-first, 直接写显存, 支持多字节行宽) */
+static void drawIcon(int x, int y, const uint8_t *data, int w, int h) {
+  int bytesPerRow = (w + 7) / 8;
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      int byteIdx = row * bytesPerRow + col / 8;
+      int bitIdx  = col % 8;
+      if (data[byteIdx] & (1 << bitIdx)) {
+        int px = x + col, py = y + row;
+        if (px >= 0 && px < ASTRA_SCREEN_W && py >= 0 && py < ASTRA_SCREEN_H) {
+          canvasBuffer[px + (py / 8) * ASTRA_SCREEN_W] |= (1 << (py % 8));
+        }
+      }
+    }
+  }
+}
+
 /* 在 canvasBuffer 顶部绘制状态栏 (y=0~STATUS_BAR_H-1) */
 static void drawStatusBar() {
   /* 1. 清除状态栏区域 */
@@ -82,33 +132,18 @@ static void drawStatusBar() {
     }
   }
 
-  /* 3. 画运行时间 (右侧, 格式: T:MMMM, 4 位分钟) */
-  uint32_t sec = HAL_GetTick() / 1000;
-  uint16_t min = (uint16_t)(sec / 60);
-  char timeBuf[8];
-  timeBuf[0] = 'T'; timeBuf[1] = ':';
-  timeBuf[2] = '0' + (min / 1000) % 10;
-  timeBuf[3] = '0' + (min / 100) % 10;
-  timeBuf[4] = '0' + (min / 10) % 10;
-  timeBuf[5] = '0' + (min / 1) % 10;
-  timeBuf[6] = 0;
-  int timeX = ASTRA_SCREEN_W - 6 * 8;  /* 右对齐, 6 字符 * 8 像素 */
-  for (int i = 0; timeBuf[i]; i++) {
-    char c = timeBuf[i];
-    if (c < ' ' || c > '~') c = ' ';
-    const unsigned char *glyph = font_8x16_data[c - ' '];
-    for (int row = 0; row < 16; row++) {
-      unsigned char b = glyph[row];
-      for (int col = 0; col < 8; col++) {
-        if (b & (0x80 >> col)) {
-          int x = timeX + i * 8 + col;
-          int y = row;
-          if (x >= 0 && x < ASTRA_SCREEN_W && y >= 0 && y < STATUS_BAR_H) {
-            canvasBuffer[x + (y / 8) * ASTRA_SCREEN_W] |= (1 << (y % 8));
-          }
-        }
-      }
-    }
+  /* 3. 右侧静态图标: WiFi(8×8) | SD卡(8×8) | 电池(16×10) */
+  {
+    int iconY;
+    int iconX = ASTRA_SCREEN_W - ICON_GAP - BAT_W;
+    iconY = (STATUS_BAR_H - BAT_H) / 2;
+    drawIcon(iconX, iconY, icon_battery, BAT_W, BAT_H);
+    iconX -= ICON_GAP + SD_W;
+    iconY = (STATUS_BAR_H - SD_H) / 2;
+    drawIcon(iconX, iconY, icon_sd, SD_W, SD_H);
+    iconX -= ICON_GAP + WIFI_W;
+    iconY = (STATUS_BAR_H - WIFI_H) / 2;
+    drawIcon(iconX, iconY, icon_wifi, WIFI_W, WIFI_H);
   }
 
   /* 4. 画底部分隔线 (y=STATUS_BAR_H-1) */
@@ -157,7 +192,7 @@ static void drawBottomStatusBar() {
 
   /* 3. 第一行文字 (y=UI_MAX_Y+1 ~ UI_MAX_Y+16, 即 129~144): 左侧版本, 右侧 FPS */
   {
-    const char *ver = "v0.3.3";
+    const char *ver = "v0.3.4";
     int x = 0;
     for (int i = 0; ver[i]; i++) { drawCharDirect(x, UI_MAX_Y + 1, ver[i]); x += 8; }
 
@@ -177,30 +212,32 @@ static void drawBottomStatusBar() {
     for (int i = 0; fpsBuf[i]; i++) { drawCharDirect(fpsX, UI_MAX_Y + 1, fpsBuf[i]); fpsX += 8; }
   }
 
-  /* 4. 第二行文字 (y=UI_MAX_Y+17 ~ UI_MAX_Y+32, 即 145~160→裁剪到159): 左侧硬件, 右侧运行秒数 */
+  /* 4. 第二行文字 (y=UI_MAX_Y+17 ~ UI_MAX_Y+32, 即 145~160→裁剪到159): 运行时间 HH:MM:SS */
   {
-    const char *hw = "STM32F103";
+    /* 计算时分秒: 总秒数 = HAL_GetTick()/1000 */
+    uint32_t secTotal = HAL_GetTick() / 1000;
+    uint32_t hours   = secTotal / 3600;
+    uint32_t minutes = (secTotal % 3600) / 60;
+    uint32_t seconds = secTotal % 60;
+
+    /* 格式: HH:MM:SS (8 字符 = 64px), 左对齐填满整行 */
+    char timeBuf[10];
+    timeBuf[0] = '0' + (hours / 10);
+    timeBuf[1] = '0' + (hours % 10);
+    timeBuf[2] = ':';
+    timeBuf[3] = '0' + (minutes / 10);
+    timeBuf[4] = '0' + (minutes % 10);
+    timeBuf[5] = ':';
+    timeBuf[6] = '0' + (seconds / 10);
+    timeBuf[7] = '0' + (seconds % 10);
+    timeBuf[8] = 0;
+
     int x = 0;
-    for (int i = 0; hw[i]; i++) {
+    for (int i = 0; timeBuf[i]; i++) {
       if (x + 8 > ASTRA_SCREEN_W) break;
-      drawCharDirect(x, UI_MAX_Y + 17, hw[i]);
+      drawCharDirect(x, UI_MAX_Y + 17, timeBuf[i]);
       x += 8;
     }
-
-    /* 运行秒数右对齐: "U:SSSSS" */
-    uint32_t sec = HAL_GetTick() / 1000;
-    char secBuf[12];
-    int sp = 0;
-    secBuf[sp++] = 'U'; secBuf[sp++] = ':';
-    if (sec == 0) { secBuf[sp++] = '0'; }
-    else {
-      char tmp[12]; int t = 0;
-      while (sec > 0) { tmp[t++] = '0' + sec % 10; sec /= 10; }
-      while (t > 0 && sp < 11) secBuf[sp++] = tmp[--t];
-    }
-    secBuf[sp] = 0;
-    int secX = ASTRA_SCREEN_W - sp * 8;
-    for (int i = 0; secBuf[i]; i++) { drawCharDirect(secX, UI_MAX_Y + 17, secBuf[i]); secX += 8; }
   }
 }
 

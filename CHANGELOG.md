@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-07-08
+
+### Added
+- **顶部状态栏右侧图标** — 静态占位图标 (外设未接)
+  - 电池图标 16×10 像素 (横向长图标，最右侧)
+  - WiFi 图标 8×8 像素
+  - SD 卡图标 8×8 像素
+- `drawIcon()` 函数 — 支持多字节行宽的位图图标绘制
+- **LSE 32.768KHz 晶振配置** — `bsp_init.c` 使能 PC14/OSC32_IN + PC15/OSC32_OUT 外部低速晶振
+
+### Changed
+- 顶部状态栏右侧：`T:MMMM` 运行分钟数 → 电池/WiFi/SD卡 静态图标
+- 底部状态栏第二行：`STM32F103` + `U:SSSSS` → `HH:MM:SS` 时分秒格式
+
+### Fixed
+- **电池图标位置/填充** — 电池移回最右侧，内部白色填充右移 1 像素
+
+---
+
+## [0.3.3] - 2026-07-08
+
+### Added
+- **底部常驻状态栏** — 屏幕最下方 32px 区域 (顶部状态栏的 2 倍)，常驻显示不遮挡 UI
+  - 第一行：左侧版本号 `v0.3.3`，右侧 `FPS:XX` 帧率
+  - 第二行：左侧硬件 `STM32F103`，右侧运行秒数 `U:SSSSS`
+
+### Changed
+- `hal.h` `screenHeight` 从 144 改为 **112** (160 - 16 顶部 - 32 底部)
+- `hal_port.cpp` 所有绘图原语底部边界从 `ASTRA_SCREEN_H` 改为 `UI_MAX_Y=128`，UI 元素不会侵入底部状态栏
+- FPS 帧率计算从 `main.cpp` 移至 `hal_port.cpp` 的 `_canvasUpdate()` 内部
+- 串口启动版本号更新为 v0.3.3
+
+### Fixed
+- **底部状态栏文字重叠** — 左侧 `Astra v0.3.2` 缩短为 `v0.3.2`，`STM32F103 ST7735S` 缩短为 `STM32F103`，避免与右侧右对齐文字重叠
+
+---
+
 ## [0.3.2] - 2026-07-08
 
 ### Changed
