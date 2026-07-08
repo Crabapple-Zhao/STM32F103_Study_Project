@@ -3,6 +3,7 @@
 //
 
 #include "launcher.h"
+#include "../../hal/hal_port.h"
 #include <cmath>
 
 namespace astra {
@@ -56,6 +57,8 @@ void Launcher::init(Menu *_rootPage) {
   selector = new Selector();
   selector->inject(_rootPage);
   selector->go(_rootPage->selectIndex);
+
+  astraSetStatusBarTitle(_rootPage->title.c_str());
 }
 
 /**
@@ -79,6 +82,8 @@ bool Launcher::open() {
   selector->inject(currentPage);
   //selector->go(currentPage->selectIndex);
 
+  astraSetStatusBarTitle(currentPage->title.c_str());
+
   return true;
 }
 
@@ -99,6 +104,8 @@ bool Launcher::close() {
 
   selector->inject(currentPage);
   //selector->go(currentPage->selectIndex);
+
+  astraSetStatusBarTitle(currentPage->title.c_str());
 
   return true;
 }

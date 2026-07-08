@@ -18,6 +18,12 @@ extern "C" {
  */
 int astraHalInit(void);
 
+/**
+ * @brief 设置状态栏显示的标题文本 (ASCII, 最长 16 字符)。
+ * @note 传入 nullptr 清空标题。字符串会被复制, 调用者无需保持生命周期。
+ */
+void astraSetStatusBarTitle(const char *title);
+
 #ifdef __cplusplus
 }
 #endif

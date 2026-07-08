@@ -46,7 +46,7 @@ namespace led {
 namespace sys {
 struct config {
   uint8_t screenWeight = 128;
-  uint8_t screenHeight = 160;
+  uint8_t screenHeight = 144;  // 160 - 16 (状态栏高度), UI 内容区域
   float screenBright = 255;
   //todo place other param of system
 };

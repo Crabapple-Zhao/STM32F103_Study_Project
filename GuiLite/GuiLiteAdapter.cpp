@@ -13,9 +13,10 @@
 #include <stdint.h>
 #include "gfx_types.h"
 
-/* C 语言 LCD 驱动接口 */
+/* C 语言接口声明 */
 extern "C" {
 #include "lcd.h"
+void HAL_Delay(uint32_t Delay);
 }
 
 /* HAL 延时函数 (C 链接) */

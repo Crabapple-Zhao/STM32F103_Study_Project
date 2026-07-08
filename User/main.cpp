@@ -9,23 +9,29 @@
 int main(void)
 {
     BSP_Init();
-    uart_puts("\r\n=== Dev-Beta v0.3.0 (Astra UI) ===\r\n");
+    uart_puts("\r\n=== Dev-Beta v0.3.1 (Astra UI) ===\r\n");
     astraHalInit();
     astraCoreInit();
 
     uart_puts("[main] astra started\r\n");
 
     uint32_t lastTick = HAL_GetTick();
+    uint32_t ledTick = HAL_GetTick();
     uint32_t frameCount = 0;
     while (1)
     {
         astraLoop();
         frameCount++;
         uint32_t now = HAL_GetTick();
-        if (now - lastTick >= 2000)
+        /* LED 心跳: 500ms 翻转 */
+        if (now - ledTick >= 500)
         {
             LED_Toggle();
-            /* 输出帧率, 评估 UI 流畅度 (简单数字格式化, 避免 printf) */
+            ledTick = now;
+        }
+        /* FPS 统计: 2000ms 输出一次 */
+        if (now - lastTick >= 2000)
+        {
             char buf[48];
             uint32_t fps = frameCount * 1000 / (now - lastTick);
             const char hex[] = "0123456789";

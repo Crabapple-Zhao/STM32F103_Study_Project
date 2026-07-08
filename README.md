@@ -113,4 +113,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.2.3** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.3.1** | 详见 [CHANGELOG.md](CHANGELOG.md)

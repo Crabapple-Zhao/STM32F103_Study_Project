@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-07-08
+
+### Added
+- **常驻状态栏** — 顶部 16px 区域显示当前页面标题（左）和运行时间 T:MMMM（右），底部白色分隔线，所有界面常驻不遮挡
+- `hal_port.h` 新增 `astraSetStatusBarTitle()` 接口，供 launcher 在页面切换时更新标题
+- `main.cpp` LED 心跳（500ms）与 FPS 统计（2000ms）拆分为独立定时器，修复 LED 闪烁变慢问题
+
+### Changed
+- `hal.h` `screenHeight` 从 160 改为 144（UI 内容区域），留 16px 给状态栏
+- `hal_port.cpp` 所有绘图函数（`_drawPixel`/`_drawHLine`/`_drawVLine`/`_drawBox`）y 坐标加 `UI_OFFSET_Y=16` 偏移，UI 元素自动下移
+- `launcher.cpp` init/open/close 后调用 `astraSetStatusBarTitle()` 更新状态栏标题
+- 串口启动版本号更新为 v0.3.1
+
+---
+
 ## [0.3.0] - 2026-07-07
 
 ### Added

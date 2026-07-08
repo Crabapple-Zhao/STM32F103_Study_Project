@@ -33,6 +33,86 @@ static uint8_t lineBuf[ASTRA_SCREEN_W * 2];
 #define FG_COLOR  0xFFFF  /* 白色 */
 #define BG_COLOR  0x0000  /* 黑色 */
 
+/* ---- 状态栏 ---- */
+#define STATUS_BAR_H  16   /* 状态栏高度 (像素) */
+#define UI_OFFSET_Y   16   /* UI 内容在 canvasBuffer 中的 y 偏移 (与状态栏高度一致) */
+static char statusBarTitle[20] = {0};  /* 状态栏标题文本 */
+
+/* 设置状态栏标题 (供 launcher 调用) */
+extern "C" void astraSetStatusBarTitle(const char *title) {
+  if (title == nullptr) { statusBarTitle[0] = 0; return; }
+  int i = 0;
+  for (; i < (int)sizeof(statusBarTitle) - 1 && title[i]; i++) statusBarTitle[i] = title[i];
+  statusBarTitle[i] = 0;
+}
+
+/* 在 canvasBuffer 顶部绘制状态栏 (y=0~STATUS_BAR_H-1) */
+static void drawStatusBar() {
+  /* 1. 清除状态栏区域 */
+  for (int y = 0; y < STATUS_BAR_H; y++) {
+    uint8_t *row = &canvasBuffer[(y / 8) * ASTRA_SCREEN_W];
+    uint8_t bit = 1 << (y % 8);
+    uint8_t nb = ~bit;
+    for (int x = 0; x < ASTRA_SCREEN_W; x++) row[x] &= nb;
+  }
+
+  /* 2. 画标题文字 (左侧, 8x16 字体, y=0~15) */
+  for (size_t i = 0; i < sizeof(statusBarTitle) && statusBarTitle[i]; i++) {
+    char c = statusBarTitle[i];
+    if (c < ' ' || c > '~') c = ' ';
+    const unsigned char *glyph = font_8x16_data[c - ' '];
+    for (int row = 0; row < 16; row++) {
+      unsigned char b = glyph[row];
+      for (int col = 0; col < 8; col++) {
+        if (b & (0x80 >> col)) {
+          int x = (int)(i * 8 + col);
+          int y = row;
+          if (x >= 0 && x < ASTRA_SCREEN_W && y >= 0 && y < STATUS_BAR_H) {
+            canvasBuffer[x + (y / 8) * ASTRA_SCREEN_W] |= (1 << (y % 8));
+          }
+        }
+      }
+    }
+  }
+
+  /* 3. 画运行时间 (右侧, 格式: T:MMMM, 4 位分钟) */
+  uint32_t sec = HAL_GetTick() / 1000;
+  uint16_t min = (uint16_t)(sec / 60);
+  char timeBuf[8];
+  timeBuf[0] = 'T'; timeBuf[1] = ':';
+  timeBuf[2] = '0' + (min / 1000) % 10;
+  timeBuf[3] = '0' + (min / 100) % 10;
+  timeBuf[4] = '0' + (min / 10) % 10;
+  timeBuf[5] = '0' + (min / 1) % 10;
+  timeBuf[6] = 0;
+  int timeX = ASTRA_SCREEN_W - 6 * 8;  /* 右对齐, 6 字符 * 8 像素 */
+  for (int i = 0; timeBuf[i]; i++) {
+    char c = timeBuf[i];
+    if (c < ' ' || c > '~') c = ' ';
+    const unsigned char *glyph = font_8x16_data[c - ' '];
+    for (int row = 0; row < 16; row++) {
+      unsigned char b = glyph[row];
+      for (int col = 0; col < 8; col++) {
+        if (b & (0x80 >> col)) {
+          int x = timeX + i * 8 + col;
+          int y = row;
+          if (x >= 0 && x < ASTRA_SCREEN_W && y >= 0 && y < STATUS_BAR_H) {
+            canvasBuffer[x + (y / 8) * ASTRA_SCREEN_W] |= (1 << (y % 8));
+          }
+        }
+      }
+    }
+  }
+
+  /* 4. 画底部分隔线 (y=STATUS_BAR_H-1) */
+  {
+    int y = STATUS_BAR_H - 1;
+    uint8_t *row = &canvasBuffer[(y / 8) * ASTRA_SCREEN_W];
+    uint8_t bit = 1 << (y % 8);
+    for (int x = 0; x < ASTRA_SCREEN_W; x++) row[x] |= bit;
+  }
+}
+
 class AstraHALPort : public HAL {
 public:
   std::string type() override { return "STM32F103_ST7735S"; }
@@ -44,6 +124,9 @@ public:
 
   /* ---- 画布刷新: 1bpp → RGB565 → LCD (流式写入, 单次窗口设置) ---- */
   void _canvasUpdate() override {
+    /* 先在 canvasBuffer 顶部绘制状态栏 (覆盖 UI 在该区域的残留) */
+    drawStatusBar();
+
     LCD_WriteBegin();
     for (int y = 0; y < ASTRA_SCREEN_H; y++) {
       uint8_t bit = 1 << (y % 8);
@@ -77,7 +160,7 @@ public:
   void _setDrawType(uint8_t _type) override { drawType = _type; }
 
   void _drawPixel(float _x, float _y) override {
-    int x = (int)_x, y = (int)_y;
+    int x = (int)_x, y = (int)_y + UI_OFFSET_Y;
     if (x < 0 || x >= ASTRA_SCREEN_W || y < 0 || y >= ASTRA_SCREEN_H) return;
     uint16_t idx = x + (y / 8) * ASTRA_SCREEN_W;
     uint8_t bit = 1 << (y % 8);
@@ -88,7 +171,7 @@ public:
 
   /* 优化: 直接字节操作, 避免 float→int 和边界检查开销 */
   void _drawHLine(float _x, float _y, float _l) override {
-    int x0 = (int)_x, y0 = (int)_y, l = (int)_l;
+    int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, l = (int)_l;
     if (l <= 0 || y0 < 0 || y0 >= ASTRA_SCREEN_H) return;
     int x1 = x0 + l - 1;
     if (x0 < 0) x0 = 0;
@@ -102,7 +185,7 @@ public:
   }
 
   void _drawVLine(float _x, float _y, float _h) override {
-    int x0 = (int)_x, y0 = (int)_y, h = (int)_h;
+    int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, h = (int)_h;
     if (h <= 0 || x0 < 0 || x0 >= ASTRA_SCREEN_W) return;
     int y1 = y0 + h - 1;
     if (y0 < 0) y0 = 0;
@@ -132,7 +215,7 @@ public:
   }
 
   void _drawBox(float _x, float _y, float _w, float _h) override {
-    int x0 = (int)_x, y0 = (int)_y, w = (int)_w, h = (int)_h;
+    int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, w = (int)_w, h = (int)_h;
     if (w <= 0 || h <= 0) return;
     int x1 = x0 + w - 1;
     int y1 = y0 + h - 1;
