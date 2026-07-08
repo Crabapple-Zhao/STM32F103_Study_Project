@@ -1,0 +1,15 @@
+{
+  "uv4Path": "D:\\Software_Work\\Keil_V5\\UV4\\UV4.exe",
+  "projects": {
+    "STM32F103_DevBeta": {
+      "path": "MDK-ARM\\Project.uvprojx",
+      "baudRate": 115200,
+      "monitorSec": 15
+    }
+  },
+  "defaultProject": "STM32F103_DevBeta",
+  "monitors": [
+    { "label": "USART1-Debug", "comPort": "COM32", "baudRate": 115200 }
+  ],
+  "monitorTimeoutSec": 30
+}

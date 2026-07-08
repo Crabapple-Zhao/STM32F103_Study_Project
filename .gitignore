@@ -1,0 +1,57 @@
+# Keil MDK build output
+MDK-ARM/Output/
+MDK-ARM/Listings/
+MDK-ARM/MDK-ARM/
+MDK-ARM/*.uvguix.*
+MDK-ARM/*.uvoptx
+MDK-ARM/*.dbgconf
+MDK-ARM/build_output.txt
+MDK-ARM/flash_output.txt
+DebugConfig/
+
+# IDE
+.vscode/
+
+# OS
+Thumbs.db
+*.bak
+*.tmp
+
+# Build scripts (contain local paths)
+build.bat
+flash.bat
+
+# ---- 追加：通用编译中间产物 ----
+*.o
+*.obj
+*.d
+*.crf
+*.lst
+*.axf
+*.map
+
+# ---- 追加：二进制/可执行文件 ----
+*.exe
+*.dll
+*.bin
+*.zip
+*.BPL
+*.INI
+
+# ---- 追加：PDF 参考文档可选忽略 ----
+*.pdf
+
+# ---- 追加：Doc 内旧工程的编译产物 ----
+Doc/**/Objects/
+Doc/**/Listings/
+Doc/**/DebugConfig/
+Doc/**/USER/*.scvd
+Doc/**/USER/*.uvoptx
+
+# ---- 追加：取模工具相关二进制 ----
+*.chm
+*.PTL
+
+# ---- 追加：二进制图片参考（可选，体积大且不影响编译） ----
+Doc/**/*.jpg
+Doc/**/*.jpeg
