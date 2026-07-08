@@ -34,9 +34,16 @@ static uint8_t lineBuf[ASTRA_SCREEN_W * 2];
 #define BG_COLOR  0x0000  /* 黑色 */
 
 /* ---- 状态栏 ---- */
-#define STATUS_BAR_H  16   /* 状态栏高度 (像素) */
-#define UI_OFFSET_Y   16   /* UI 内容在 canvasBuffer 中的 y 偏移 (与状态栏高度一致) */
-static char statusBarTitle[20] = {0};  /* 状态栏标题文本 */
+#define STATUS_BAR_H   16   /* 顶部状态栏高度 (像素) */
+#define BOTTOM_BAR_H   32   /* 底部状态栏高度 (像素, 顶部的 2 倍) */
+#define UI_OFFSET_Y    16   /* UI 内容在 canvasBuffer 中的 y 偏移 (避开顶部状态栏) */
+#define UI_MAX_Y       (ASTRA_SCREEN_H - BOTTOM_BAR_H)  /* UI 内容最大 y 坐标 = 128, 避开底部状态栏 */
+static char statusBarTitle[20] = {0};  /* 顶部状态栏标题文本 */
+
+/* ---- 底部状态栏 FPS 计算 ---- */
+static uint32_t fpsLastTick = 0;
+static uint32_t fpsFrameCount = 0;
+static uint8_t  currentFps = 0;
 
 /* 设置状态栏标题 (供 launcher 调用) */
 extern "C" void astraSetStatusBarTitle(const char *title) {
@@ -113,6 +120,90 @@ static void drawStatusBar() {
   }
 }
 
+/* 在 canvasBuffer 顶部绘制一个 8x16 字符 (直接写显存, 不经过 UI_OFFSET_Y/UI_MAX_Y) */
+static void drawCharDirect(int x, int y, char c) {
+  if (c < ' ' || c > '~') c = ' ';
+  const unsigned char *glyph = font_8x16_data[c - ' '];
+  for (int row = 0; row < 16; row++) {
+    unsigned char b = glyph[row];
+    for (int col = 0; col < 8; col++) {
+      if (b & (0x80 >> col)) {
+        int px = x + col, py = y + row;
+        if (px >= 0 && px < ASTRA_SCREEN_W && py >= 0 && py < ASTRA_SCREEN_H) {
+          canvasBuffer[px + (py / 8) * ASTRA_SCREEN_W] |= (1 << (py % 8));
+        }
+      }
+    }
+  }
+}
+
+/* 在 canvasBuffer 底部绘制状态栏 (y=UI_MAX_Y ~ ASTRA_SCREEN_H-1, 32px 高) */
+static void drawBottomStatusBar() {
+  /* 1. 清除底部状态栏区域 (y=128~159) */
+  for (int y = UI_MAX_Y; y < ASTRA_SCREEN_H; y++) {
+    uint8_t *row = &canvasBuffer[(y / 8) * ASTRA_SCREEN_W];
+    uint8_t bit = 1 << (y % 8);
+    uint8_t nb = ~bit;
+    for (int x = 0; x < ASTRA_SCREEN_W; x++) row[x] &= nb;
+  }
+
+  /* 2. 画顶部分隔线 (y=UI_MAX_Y) */
+  {
+    int y = UI_MAX_Y;
+    uint8_t *row = &canvasBuffer[(y / 8) * ASTRA_SCREEN_W];
+    uint8_t bit = 1 << (y % 8);
+    for (int x = 0; x < ASTRA_SCREEN_W; x++) row[x] |= bit;
+  }
+
+  /* 3. 第一行文字 (y=UI_MAX_Y+1 ~ UI_MAX_Y+16, 即 129~144): 左侧版本, 右侧 FPS */
+  {
+    const char *ver = "v0.3.3";
+    int x = 0;
+    for (int i = 0; ver[i]; i++) { drawCharDirect(x, UI_MAX_Y + 1, ver[i]); x += 8; }
+
+    /* FPS 右对齐: "FPS:XX" 共 6 字符 = 48 像素 */
+    char fpsBuf[8];
+    fpsBuf[0] = 'F'; fpsBuf[1] = 'P'; fpsBuf[2] = 'S'; fpsBuf[3] = ':';
+    uint8_t fps = currentFps;  /* 用局部变量, 避免修改全局 */
+    if (fps == 0) { fpsBuf[4] = '0'; fpsBuf[5] = 0; }
+    else {
+      fpsBuf[5] = '0' + fps % 10; fps /= 10;
+      fpsBuf[4] = (fps > 0) ? ('0' + fps) : ' ';
+      fpsBuf[6] = 0;
+    }
+    int fpsLen = 0;
+    while (fpsBuf[fpsLen]) fpsLen++;
+    int fpsX = ASTRA_SCREEN_W - fpsLen * 8;
+    for (int i = 0; fpsBuf[i]; i++) { drawCharDirect(fpsX, UI_MAX_Y + 1, fpsBuf[i]); fpsX += 8; }
+  }
+
+  /* 4. 第二行文字 (y=UI_MAX_Y+17 ~ UI_MAX_Y+32, 即 145~160→裁剪到159): 左侧硬件, 右侧运行秒数 */
+  {
+    const char *hw = "STM32F103";
+    int x = 0;
+    for (int i = 0; hw[i]; i++) {
+      if (x + 8 > ASTRA_SCREEN_W) break;
+      drawCharDirect(x, UI_MAX_Y + 17, hw[i]);
+      x += 8;
+    }
+
+    /* 运行秒数右对齐: "U:SSSSS" */
+    uint32_t sec = HAL_GetTick() / 1000;
+    char secBuf[12];
+    int sp = 0;
+    secBuf[sp++] = 'U'; secBuf[sp++] = ':';
+    if (sec == 0) { secBuf[sp++] = '0'; }
+    else {
+      char tmp[12]; int t = 0;
+      while (sec > 0) { tmp[t++] = '0' + sec % 10; sec /= 10; }
+      while (t > 0 && sp < 11) secBuf[sp++] = tmp[--t];
+    }
+    secBuf[sp] = 0;
+    int secX = ASTRA_SCREEN_W - sp * 8;
+    for (int i = 0; secBuf[i]; i++) { drawCharDirect(secX, UI_MAX_Y + 17, secBuf[i]); secX += 8; }
+  }
+}
+
 class AstraHALPort : public HAL {
 public:
   std::string type() override { return "STM32F103_ST7735S"; }
@@ -126,6 +217,17 @@ public:
   void _canvasUpdate() override {
     /* 先在 canvasBuffer 顶部绘制状态栏 (覆盖 UI 在该区域的残留) */
     drawStatusBar();
+    /* 再在 canvasBuffer 底部绘制状态栏 (覆盖 UI 在该区域的残留) */
+    drawBottomStatusBar();
+
+    /* FPS 计算 (基于 canvasUpdate 调用次数) */
+    fpsFrameCount++;
+    uint32_t now = HAL_GetTick();
+    if (now - fpsLastTick >= 1000) {
+      currentFps = (uint8_t)(fpsFrameCount * 1000 / (now - fpsLastTick));
+      fpsFrameCount = 0;
+      fpsLastTick = now;
+    }
 
     LCD_WriteBegin();
     for (int y = 0; y < ASTRA_SCREEN_H; y++) {
@@ -161,7 +263,7 @@ public:
 
   void _drawPixel(float _x, float _y) override {
     int x = (int)_x, y = (int)_y + UI_OFFSET_Y;
-    if (x < 0 || x >= ASTRA_SCREEN_W || y < 0 || y >= ASTRA_SCREEN_H) return;
+    if (x < 0 || x >= ASTRA_SCREEN_W || y < 0 || y >= UI_MAX_Y) return;
     uint16_t idx = x + (y / 8) * ASTRA_SCREEN_W;
     uint8_t bit = 1 << (y % 8);
     if (drawType == 1) canvasBuffer[idx] |= bit;
@@ -172,7 +274,7 @@ public:
   /* 优化: 直接字节操作, 避免 float→int 和边界检查开销 */
   void _drawHLine(float _x, float _y, float _l) override {
     int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, l = (int)_l;
-    if (l <= 0 || y0 < 0 || y0 >= ASTRA_SCREEN_H) return;
+    if (l <= 0 || y0 < 0 || y0 >= UI_MAX_Y) return;
     int x1 = x0 + l - 1;
     if (x0 < 0) x0 = 0;
     if (x1 >= ASTRA_SCREEN_W) x1 = ASTRA_SCREEN_W - 1;
@@ -189,7 +291,7 @@ public:
     if (h <= 0 || x0 < 0 || x0 >= ASTRA_SCREEN_W) return;
     int y1 = y0 + h - 1;
     if (y0 < 0) y0 = 0;
-    if (y1 >= ASTRA_SCREEN_H) y1 = ASTRA_SCREEN_H - 1;
+    if (y1 >= UI_MAX_Y) y1 = UI_MAX_Y - 1;
     if (y0 > y1) return;
     int page = y0 / 8;
     int bitIdx = y0 % 8;
@@ -222,7 +324,7 @@ public:
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
     if (x1 >= ASTRA_SCREEN_W) x1 = ASTRA_SCREEN_W - 1;
-    if (y1 >= ASTRA_SCREEN_H) y1 = ASTRA_SCREEN_H - 1;
+    if (y1 >= UI_MAX_Y) y1 = UI_MAX_Y - 1;
     if (x0 > x1 || y0 > y1) return;
     uint8_t op = drawType;
     for (int y = y0; y <= y1; y++) {
