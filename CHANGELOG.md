@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-07-06
+
+### Added
+- `Hardware/KEY/key.c+h` — 按键驱动模块，支持 KEY1(PA0) 和 KEY2(PC13)，下拉输入
+- 按键测试 Demo：屏幕实时显示按键状态（按下绿色/蓝色，松开灰色）
+- 触发电平宏抽象：`LED_ACTIVE_LEVEL`(led.h) 和 `KEY_ACTIVE_LEVEL`(key.h)
+
+### Changed
+- LED 心跳灯从 PC13 移至 PA11
+- TFT BLK 背光从 PA0 移至 PA4（解决与 KEY1 引脚冲突）
+- 按键初始化 `KEY_Init()` 放在 `LCD_Init()` 之后（避免 PA0 被覆盖）
+- 屏幕刷新优化：仅在按键状态变化时更新显示区域
+
+### Fixed
+- **PA0 引脚冲突**：KEY1 与 BLK 共用 PA0，按下按键时背光变亮
+- **文字遮挡**：按键状态区域与提示文字重叠，调整布局到 y=132
+
+---
+
 ## [0.2.0] - 2025-06-14
 
 ### Added

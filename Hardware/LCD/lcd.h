@@ -1,7 +1,7 @@
 /**
  * @file    lcd.h
  * @brief   1.8寸 TFT-LCD (ST7735S, 128x160) 驱动头文件
- * @note    PA5=SCK(SPI1), PA7=MOSI(SPI1), PA0=BLK, PA1=CS, PA2=RST, PA3=DC
+ * @note    PA5=SCK(SPI1), PA7=MOSI(SPI1), PA4=BLK, PA1=CS, PA2=RST, PA3=DC
  */
 #ifndef __LCD_H
 #define __LCD_H

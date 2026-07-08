@@ -18,6 +18,9 @@ extern "C" {
 #include "lcd.h"
 }
 
+/* HAL 延时函数 (C 链接) */
+extern "C" void HAL_Delay(uint32_t Delay);
+
 /* ======================== 颜色转换 ======================== */
 
 /* GL_RGB = 0xAARRGGBB → RGB565 */
@@ -50,6 +53,5 @@ EXTERNAL_GFX_OP gfx_op = { gl_draw_pixel, gl_fill_rect };
 
 extern "C" void delay_ms(unsigned short nms)
 {
-    extern "C" void HAL_Delay(uint32_t Delay);
     HAL_Delay((uint32_t)nms);
 }

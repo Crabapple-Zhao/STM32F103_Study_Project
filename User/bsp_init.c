@@ -1,10 +1,11 @@
 /**
- * @file    bsp_init.c — 集中初始化: 时钟 + LED + USART + TFT
+ * @file    bsp_init.c - board init: clock + LED + USART + TFT + KEY
  */
 #include "bsp_init.h"
 #include "led.h"
 #include "usart.h"
 #include "lcd.h"
+#include "key.h"
 
 static void SystemClock_Config(void)
 {
@@ -33,8 +34,9 @@ void BSP_Init(void)
     SystemClock_Config();
     LED_Init();
     USART1_Init(115200);
-    uart_puts("\r\n=== STM32F103 HAL v0.0.1 ===\r\n");
+    uart_puts("\r\n=== STM32F103 HAL v0.2.1 ===\r\n");
     LCD_Init();
+    KEY_Init();   /* must be after LCD_Init(), PA0 shared with BLK */
 }
 
 void SysTick_Handler(void)

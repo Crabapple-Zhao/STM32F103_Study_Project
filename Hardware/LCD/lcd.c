@@ -1,13 +1,13 @@
 /**
- * @file    lcd.c �� ST7735S HAL SPI1 + DMA
- *          PA0=BLK, PA1=CS, PA2=RST, PA3=DC, PA5=SCK, PA7=MOSI
+ * @file    lcd.c — ST7735S HAL SPI1 + DMA
+ *          PA4=BLK, PA1=CS, PA2=RST, PA3=DC, PA5=SCK, PA7=MOSI
  */
 #include "lcd.h"
 #include "spi.h"
 #include "dma.h"
 #include "lcdfont.h"
 
-#define P_BLK GPIO_PIN_0
+#define P_BLK GPIO_PIN_4
 #define P_CS  GPIO_PIN_1
 #define P_RST GPIO_PIN_2
 #define P_DC  GPIO_PIN_3
