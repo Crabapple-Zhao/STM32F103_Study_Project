@@ -12,9 +12,9 @@ void LED_Init(void)
     g.Pull  = GPIO_NOPULL;
     g.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LED_PORT, &g);
-    HAL_GPIO_WritePin(LED_PORT, LED_PIN, !LED_ACTIVE_LEVEL);
+    HAL_GPIO_WritePin(LED_PORT, LED_PIN, (GPIO_PinState)!LED_ACTIVE_LEVEL);
 }
 
 void LED_On(void)    { HAL_GPIO_WritePin(LED_PORT, LED_PIN, LED_ACTIVE_LEVEL); }
-void LED_Off(void)   { HAL_GPIO_WritePin(LED_PORT, LED_PIN, !LED_ACTIVE_LEVEL); }
+void LED_Off(void)   { HAL_GPIO_WritePin(LED_PORT, LED_PIN, (GPIO_PinState)!LED_ACTIVE_LEVEL); }
 void LED_Toggle(void) { HAL_GPIO_TogglePin(LED_PORT, LED_PIN); }

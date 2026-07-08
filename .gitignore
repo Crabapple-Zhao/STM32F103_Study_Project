@@ -55,3 +55,11 @@ Doc/**/USER/*.uvoptx
 # ---- 追加：二进制图片参考（可选，体积大且不影响编译） ----
 Doc/**/*.jpg
 Doc/**/*.jpeg
+
+# ---- 追加：调试脚本与临时文件 ----
+read_serial*.ps1
+MDK-ARM/build_log.txt
+MDK-ARM/flash_log.txt
+generate_doc.py
+write_key.py
+keil_config.json

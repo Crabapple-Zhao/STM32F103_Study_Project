@@ -14,6 +14,7 @@
 | 调试 | SWD (ST-LINK), USB-UART (COM20) |
 | LED | PA11 心跳灯 (低电平点亮) |
 | 按键 | KEY1=PA0, KEY2=PC13 (高电平按下) |
+| 编码器 | A=PB6, B=PB7, SW=PB5 (TIM4 编码器模式) |
 
 ## 引脚
 
@@ -30,6 +31,9 @@
 | PA10 | USART1 RX |
 | PA11 | LED (心跳灯，低电平点亮) |
 | PC13 | KEY2 (按键，下拉输入) |
+| PB5 | ENC SW (编码器按键，上拉输入，低电平按下) |
+| PB6 | ENC A (TIM4_CH1，编码器 A 相) |
+| PB7 | ENC B (TIM4_CH2，编码器 B 相) |
 | PA13/P14 | SWDIO/SWCLK (调试) |
 
 ## 工程结构
@@ -41,18 +45,20 @@ Dev-beta-STM32F103/
 │   ├── STM32F1xx_HAL_Driver/ # HAL 库 (Inc + Src)
 │   ├── USART/usart.c+h       # USART1 驱动
 │   ├── SPI/spi.c+h           # SPI1 寄存器级驱动 (18MHz)
-│   └── DMA/dma.c+h           # DMA1_Ch3 寄存器级驱动 (SPI_Tx)
+│   ├── DMA/dma.c+h           # DMA1_Ch3 寄存器级驱动 (SPI_Tx)
+│   └── Timer/timer.c+h       # TIM4 编码器模式驱动 (寄存器级)
 ├── Hardware/
 │   ├── LCD/lcd.c+h           # ST7735S 128x160 (SPI+DMA)
 │   ├── LED/led.c+h           # PA11 心跳灯
-│   └── KEY/key.c+h           # KEY1(PA0) + KEY2(PC13) 按键驱动
+│   ├── KEY/key.c+h           # KEY1(PA0) + KEY2(PC13) 按键驱动
+│   └── Encoder/encoder.c+h   # 编码器旋钮驱动 (A/B/SW)
 ├── GuiLite/                   # GuiLite v3.4 移植层
 │   ├── GuiLite_min.h         # 最小渲染子集 (排除控件系统)
 │   ├── GuiLiteAdapter.cpp    # LCD 驱动适配桥接
 │   ├── gfx_types.h           # EXTERNAL_GFX_OP 类型定义
 │   └── font_ascii_8x16.h     # 8x16 ASCII 字体 (ROW-MAJOR 1bpp)
 ├── User/
-│   ├── main.cpp              # C++ 入口 / 按键测试 Demo
+│   ├── main.cpp              # C++ 入口 / 按键+编码器 Demo
 │   ├── main.h                # 主头文件
 │   ├── bsp_init.c+h          # 板级初始化 + 中断处理函数
 ├── Startup/startup_stm32f103xb.s  # 启动文件 (Stack=1KB, Heap=4KB)
@@ -60,13 +66,21 @@ Dev-beta-STM32F103/
 └── CHANGELOG.md              # 变更记录
 ```
 
+## 编码器
+
+- **硬件连接**: A=PB6(TIM4_CH1), B=PB7(TIM4_CH2), SW=PB5, C=GND
+- **驱动方式**: TIM4 编码器模式 (TI1+TI2 双沿四倍频)，寄存器级配置
+- **SW 按键**: 上拉输入，按下时接通 GND (低电平有效)
+- **API**: `Encoder_Init()` / `Encoder_GetCount()` / `Encoder_ResetCount()` / `Encoder_SW_Read()`
+- **屏幕显示**: 第 8 行 ENC 数值+SW 状态，第 9 行 KEY1/KEY2 状态
+
 ## 编译烧录
 
 ```bash
 # Keil 命令行编译 (需安装 ARMCC V5)
 UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 
-# STM32CubeProgrammer 烧录
+# STM32CubeProgrammer SWD 烧录
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
@@ -86,7 +100,8 @@ main.cpp (C++)
 - **GuiLite_min.h** 从完整 GuiLite.h 提取最小子集，排除控件/消息系统的静态变量（节省 ~5KB RAM）
 - **draw_lattice** 已适配字体数据为 ROW-MAJOR 1bpp 格式（每字节=1行8像素，MSB=左像素）
 - **按键** KEY1/KEY2 配置为下拉输入，高电平按下；触发电平宏定义在 `key.h`/`led.h` 中
+- **屏幕刷新** 采用局部刷新策略 + 不透明背景画字，减少闪烁
 
 ## 版本
 
-当前: **v0.2.1** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.2.2** | 详见 [CHANGELOG.md](CHANGELOG.md)

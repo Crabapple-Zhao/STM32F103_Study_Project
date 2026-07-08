@@ -6,6 +6,7 @@
 #include "usart.h"
 #include "lcd.h"
 #include "key.h"
+#include "encoder.h"
 
 static void SystemClock_Config(void)
 {
@@ -34,9 +35,10 @@ void BSP_Init(void)
     SystemClock_Config();
     LED_Init();
     USART1_Init(115200);
-    uart_puts("\r\n=== STM32F103 HAL v0.2.1 ===\r\n");
+    uart_puts("\r\n=== STM32F103 HAL v0.2.2 ===\r\n");
     LCD_Init();
-    KEY_Init();   /* must be after LCD_Init(), PA0 shared with BLK */
+    KEY_Init();      /* must be after LCD_Init(), PA0 shared with BLK */
+    Encoder_Init();  /* PB6/PB7 TIM4 encoder, PB5 SW button */
 }
 
 void SysTick_Handler(void)

@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\GuiLite</IncludePath>
+              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\GuiLite</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -484,6 +484,11 @@
               <FileType>1</FileType>
               <FilePath>..\Drivers\DMA\dma.c</FilePath>
             </File>
+            <File>
+              <FileName>timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\Timer\timer.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -503,6 +508,11 @@
               <FileName>key.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\KEY\key.c</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\Encoder\encoder.c</FilePath>
             </File>
           </Files>
         </Group>

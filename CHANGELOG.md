@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025-07-07
+
+### Added
+- `Drivers/Timer/timer.c+h` — TIM4 编码器模式驱动 (TI1+TI2 双沿四倍频，寄存器级配置)
+- `Hardware/Encoder/encoder.c+h` — 编码器旋钮驱动模块 (A=PB6, B=PB7, SW=PB5)
+- 编码器 Demo：屏幕第 8 行显示 ENC 数值+SW 状态，第 9 行保留按键测试
+- 编码器 API：`Encoder_Init()` / `Encoder_GetCount()` / `Encoder_ResetCount()` / `Encoder_SW_Read()`
+
+### Changed
+- 按键测试区域缩小并下移，为编码器显示腾出空间 (ENC_DISP_Y=116, KEY_DISP_Y=134)
+- 屏幕刷新优化为局部刷新：独立判断每个区域状态变化，只重绘变化区域
+
+### Fixed
+- **SW:OFF 出界**：SW 区域右移 (x=76→100)，确保在 128px 屏幕内
+- **编码器数值叠加**：draw_string 改用不透明黑背景 `GL_RGB(0,0,0)` 替代透明背景，一步覆盖旧内容
+- **整行闪烁**：去除 fill_rect 清屏步骤，draw_string 用不透明背景一步完成
+
+---
+
 ## [0.2.1] - 2025-07-06
 
 ### Added

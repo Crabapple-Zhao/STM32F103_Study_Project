@@ -46,6 +46,7 @@
 #define ALIGN_BOTTOM   0x00200000L
 
 #define ASSERT(c)      do { if (!(c)) { for (;;); } } while (0)
+#pragma diag_suppress 111,1293
 #define MAX(a,b)       (((a) > (b)) ? (a) : (b))
 #define MIN(a,b)       (((a) < (b)) ? (a) : (b))
 
@@ -454,4 +455,5 @@ private:
 FONT_INFO*    c_theme::s_font_map[FONT_MAX]  = {0};
 unsigned int  c_theme::s_color_map[COLOR_MAX] = {0};
 
+#pragma diag_default 111,1293
 #endif /* GUILITE_MIN_H */
