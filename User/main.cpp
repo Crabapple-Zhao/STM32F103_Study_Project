@@ -3,17 +3,23 @@
  */
 #include "main.h"
 #include "usart.h"
+#include "app_config.h"
+#include "app_log.h"
 #include "hal_port.h"
 #include "astra_rocket.h"
 
 int main(void)
 {
     BSP_Init();
-    uart_puts("\r\n=== Dev-Beta v0.3.5 (Astra UI) ===\r\n");
+    uart_puts("\r\n[INFO] [boot] firmware=" APP_NAME
+              " version=" APP_VERSION
+              " ui=" APP_UI_NAME
+              " target=" APP_TARGET_NAME
+              " lcd=" APP_LCD_NAME "\r\n");
     astraHalInit();
     astraCoreInit();
 
-    uart_puts("[main] astra started\r\n");
+    APP_LOG_INFO("main", "astra_started=true");
 
     uint32_t lastTick = HAL_GetTick();
     uint32_t ledTick = HAL_GetTick();
@@ -36,7 +42,7 @@ int main(void)
             uint32_t fps = frameCount * 1000 / (now - lastTick);
             const char hex[] = "0123456789";
             int p = 0;
-            const char prefix[] = "[main] fps=";
+            const char prefix[] = "[INFO] [main] fps=";
             for (int i = 0; prefix[i]; i++) buf[p++] = prefix[i];
             if (fps == 0) { buf[p++] = '0'; }
             else {

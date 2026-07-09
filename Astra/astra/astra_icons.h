@@ -6,7 +6,7 @@
 #ifndef ASTRA_CORE_SRC_ASTRA_ASTRA_ICONS_H_
 #define ASTRA_CORE_SRC_ASTRA_ICONS_H_
 
-#include <cstdint>
+#include <stdint.h>
 
 /* Home 图标 */
 static const uint8_t pic_home_data[] = {

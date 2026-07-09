@@ -9,7 +9,7 @@
   },
   "defaultProject": "STM32F103_DevBeta",
   "monitors": [
-    { "label": "USART1-Debug", "comPort": "COM32", "baudRate": 115200 }
+    { "label": "USART1-Debug", "comPort": "COM9", "baudRate": 115200 }
   ],
   "monitorTimeoutSec": 30
 }

@@ -36,12 +36,4 @@ void astraShowBootScreen(void);
 }
 #endif
 
-#ifdef __cplusplus
-/*---- C++ 侧 ----*/
-#include "../astra/ui/launcher.h"
-
-extern astra::Launcher* astraLauncher;
-extern astra::Menu* rootPage;
-#endif
-
 #endif //ASTRA_CORE_SRC_ASTRA_ASTRA_ROCKET_H_

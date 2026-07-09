@@ -7,6 +7,7 @@
 #include "lcd.h"
 #include "key.h"
 #include "encoder.h"
+#include "app_config.h"
 
 static void SystemClock_Config(void)
 {
@@ -38,9 +39,9 @@ void BSP_Init(void)
     HAL_Init();
     SystemClock_Config();
     LED_Init();
-    USART1_Init(115200);
+    USART1_Init(APP_USART_BAUDRATE);
     LCD_Init();
-    KEY_Init();      /* must be after LCD_Init(), PA0 shared with BLK */
+    KEY_Init();      /* KEY1=PA0, KEY2=PC13 auxiliary inputs */
     Encoder_Init();  /* PB6/PB7 TIM4 encoder, PB5 SW button */
 }
 
@@ -92,19 +93,19 @@ void HardFault_Handler(void)
     uint32_t stacked_xpsr= msp[7];
 
     dbg_usart1_init();
-    dbg_puts("\r\n!!! HARDFAULT !!!\r\n");
-    dbg_puts("PC  = "); dbg_hex(stacked_pc); dbg_puts("\r\n");
-    dbg_puts("LR  = "); dbg_hex(stacked_lr); dbg_puts("\r\n");
-    dbg_puts("XPSR= "); dbg_hex(stacked_xpsr); dbg_puts("\r\n");
+    dbg_puts("\r\n[ERROR] [fault] type=HardFault\r\n");
+    dbg_puts("[ERROR] [fault] pc="); dbg_hex(stacked_pc); dbg_puts("\r\n");
+    dbg_puts("[ERROR] [fault] lr="); dbg_hex(stacked_lr); dbg_puts("\r\n");
+    dbg_puts("[ERROR] [fault] xpsr="); dbg_hex(stacked_xpsr); dbg_puts("\r\n");
 
     volatile uint32_t *cfsr = (volatile uint32_t*)0xE000ED28;
     volatile uint32_t *hfsr = (volatile uint32_t*)0xE000ED2C;
     volatile uint32_t *bfar = (volatile uint32_t*)0xE000ED38;
     volatile uint32_t *mmfar= (volatile uint32_t*)0xE000ED34;
-    dbg_puts("CFSR= "); dbg_hex(*cfsr); dbg_puts("\r\n");
-    dbg_puts("HFSR= "); dbg_hex(*hfsr); dbg_puts("\r\n");
-    dbg_puts("BFAR= "); dbg_hex(*bfar); dbg_puts("\r\n");
-    dbg_puts("MMFAR="); dbg_hex(*mmfar); dbg_puts("\r\n");
+    dbg_puts("[ERROR] [fault] cfsr="); dbg_hex(*cfsr); dbg_puts("\r\n");
+    dbg_puts("[ERROR] [fault] hfsr="); dbg_hex(*hfsr); dbg_puts("\r\n");
+    dbg_puts("[ERROR] [fault] bfar="); dbg_hex(*bfar); dbg_puts("\r\n");
+    dbg_puts("[ERROR] [fault] mmfar="); dbg_hex(*mmfar); dbg_puts("\r\n");
 
     while (1) {
         volatile uint32_t *bsrr = (volatile uint32_t*)(0x40010800 + 0x10);

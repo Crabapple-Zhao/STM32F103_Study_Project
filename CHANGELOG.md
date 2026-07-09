@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2026-07-09
+
+### Changed
+- **代码结构整理** — 新增 `app_config.h` 统一维护固件名、版本号、目标芯片、LCD 名称、USART 波特率和当前调试串口配置，避免启动页、状态栏和串口日志版本号分散维护。
+- **日志格式统一** — 新增 `app_log.h`，启动日志、Astra 初始化日志、FPS 日志和 HardFault 诊断统一为 `[LEVEL] [module] key=value` 风格，便于串口监听和问题定位。
+- **Astra 启动模块解耦** — `astra_rocket.cpp` 拆分开机文字绘制、图标加载、菜单树构建和叶子菜单添加逻辑，并收回内部 `astraLauncher/rootPage/toolPage` 指针，减少外部模块误用。
+- **头文件依赖收敛** — `main.h` 移除未直接需要的 USART/LCD 头文件，入口依赖更清晰。
+- **脚本注释清理** — `build.bat` / `flash.bat` 注释改为 ASCII，避免 Windows 批处理在非 UTF-8 代码页下把乱码当作命令执行。
+
+### Fixed
+- **状态栏版本不一致** — 底部状态栏版本号改为复用 `APP_VERSION`，与开机页和串口启动日志保持一致。
+- **过期注释** — `BSP_Init()` 中 KEY 初始化注释更新为当前 KEY1/KEY2 辅助输入说明。
+- **文档串口配置** — 当前 USART1 调试串口配置同步为 COM9。
+
+---
+
 ## [0.3.5] - 2026-07-08
 
 ### Added

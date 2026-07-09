@@ -7,7 +7,5 @@
 #include "stm32f1xx_hal.h"
 #include "bsp_init.h"
 #include "led.h"
-#include "usart.h"
-#include "lcd.h"
 
 #endif

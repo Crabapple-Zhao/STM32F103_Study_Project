@@ -1,4 +1,4 @@
-//
+﻿//
 // HAL 移植实现 — Astra UI → STM32F103C8T6 + ST7735S (128x160 RGB565)
 //
 // 核心策略：使用 1bpp 虚拟显存 (128*160/8 = 2560 字节)，
@@ -10,6 +10,7 @@
 #include "lcd.h"
 #include "dma.h"
 #include "encoder.h"
+#include "app_config.h"
 #include "stm32f1xx_hal.h"
 #include <cstring>
 #include <string.h>
@@ -195,7 +196,7 @@ static void drawBottomStatusBar() {
 
   /* 3. 第一行文字 (y=UI_MAX_Y+1 ~ UI_MAX_Y+16, 即 129~144): 左侧版本, 右侧 FPS */
   {
-    const char *ver = "v0.3.4";
+    const char *ver = APP_VERSION;
     int x = 0;
     for (int i = 0; ver[i]; i++) { drawCharDirect(x, UI_MAX_Y + 1, ver[i]); x += 8; }
 
@@ -244,17 +245,21 @@ static void drawBottomStatusBar() {
   }
 }
 
+#if defined(__CC_ARM)
+#pragma diag_suppress 1300
+#endif
+
 class AstraHALPort : public HAL {
 public:
-  std::string type() override { return "STM32F103_ST7735S"; }
+  std::string type() { return "STM32F103_ST7735S"; }
 
   /* ---- 画布缓冲 ---- */
-  void *_getCanvasBuffer() override { return canvasBuffer; }
-  uint8_t _getBufferTileHeight() override { return ASTRA_SCREEN_H / 8; }  /* 20 */
-  uint8_t _getBufferTileWidth() override { return ASTRA_SCREEN_W; }       /* 128 */
+  void *_getCanvasBuffer() { return canvasBuffer; }
+  uint8_t _getBufferTileHeight() { return ASTRA_SCREEN_H / 8; }  /* 20 */
+  uint8_t _getBufferTileWidth() { return ASTRA_SCREEN_W; }       /* 128 */
 
   /* ---- 画布刷新: 1bpp → RGB565 → LCD (流式写入, 单次窗口设置) ---- */
-  void _canvasUpdate() override {
+  void _canvasUpdate() {
     if (!bootScreenActive) {
       drawStatusBar();
       drawBottomStatusBar();
@@ -285,25 +290,25 @@ public:
     LCD_WriteEnd();
   }
 
-  void _canvasClear() override {
+  void _canvasClear() {
     memset(canvasBuffer, 0, ASTRA_BUF_SIZE);
   }
 
   /* ---- 字体 ---- */
-  void _setFont(const uint8_t *) override {}  /* 使用内置 8x16, 无需外部字体 */
+  void _setFont(const uint8_t *) {}  /* 使用内置 8x16, 无需外部字体 */
 
-  uint8_t _getFontWidth(std::string &_text) override {
+  uint8_t _getFontWidth(std::string &_text) {
     return (uint8_t)(_text.length() * 8);
   }
 
-  uint8_t _getFontHeight() override { return 16; }
+  uint8_t _getFontHeight() { return 16; }
 
   /* ---- 绘图原语 ---- */
   uint8_t drawType = 1;
 
-  void _setDrawType(uint8_t _type) override { drawType = _type; }
+  void _setDrawType(uint8_t _type) { drawType = _type; }
 
-  void _drawPixel(float _x, float _y) override {
+  void _drawPixel(float _x, float _y) {
     int x = (int)_x, y = (int)_y + UI_OFFSET_Y;
     if (x < 0 || x >= ASTRA_SCREEN_W || y < 0 || y >= UI_MAX_Y) return;
     uint16_t idx = x + (y / 8) * ASTRA_SCREEN_W;
@@ -314,7 +319,7 @@ public:
   }
 
   /* 优化: 直接字节操作, 避免 float→int 和边界检查开销 */
-  void _drawHLine(float _x, float _y, float _l) override {
+  void _drawHLine(float _x, float _y, float _l) {
     int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, l = (int)_l;
     if (l <= 0 || y0 < 0 || y0 >= UI_MAX_Y) return;
     int x1 = x0 + l - 1;
@@ -328,7 +333,7 @@ public:
     else                    { uint8_t nb = ~bit; for (int x = x0; x <= x1; x++) row[x] &= nb; }
   }
 
-  void _drawVLine(float _x, float _y, float _h) override {
+  void _drawVLine(float _x, float _y, float _h) {
     int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, h = (int)_h;
     if (h <= 0 || x0 < 0 || x0 >= ASTRA_SCREEN_W) return;
     int y1 = y0 + h - 1;
@@ -350,15 +355,15 @@ public:
     }
   }
 
-  void _drawHDottedLine(float _x, float _y, float _l) override {
+  void _drawHDottedLine(float _x, float _y, float _l) {
     for (int i = 0; i < (int)_l; i += 2) _drawPixel(_x + i, _y);
   }
 
-  void _drawVDottedLine(float _x, float _y, float _h) override {
+  void _drawVDottedLine(float _x, float _y, float _h) {
     for (int i = 0; i < (int)_h; i += 2) _drawPixel(_x, _y + i);
   }
 
-  void _drawBox(float _x, float _y, float _w, float _h) override {
+  void _drawBox(float _x, float _y, float _w, float _h) {
     int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, w = (int)_w, h = (int)_h;
     if (w <= 0 || h <= 0) return;
     int x1 = x0 + w - 1;
@@ -378,14 +383,14 @@ public:
     }
   }
 
-  void _drawFrame(float _x, float _y, float _w, float _h) override {
+  void _drawFrame(float _x, float _y, float _w, float _h) {
     _drawHLine(_x, _y, _w);
     _drawHLine(_x, _y + _h - 1, _w);
     _drawVLine(_x, _y, _h);
     _drawVLine(_x + _w - 1, _y, _h);
   }
 
-  void _drawRBox(float _x, float _y, float _w, float _h, float _r) override {
+  void _drawRBox(float _x, float _y, float _w, float _h, float _r) {
     int x = (int)_x, y = (int)_y, w = (int)_w, h = (int)_h;
     int r = (int)_r;
     if (r <= 0) { _drawBox(_x, _y, _w, _h); return; }
@@ -407,7 +412,7 @@ public:
     }
   }
 
-  void _drawRFrame(float _x, float _y, float _w, float _h, float _r) override {
+  void _drawRFrame(float _x, float _y, float _w, float _h, float _r) {
     int x = (int)_x, y = (int)_y, w = (int)_w, h = (int)_h;
     int r = (int)_r;
     if (r <= 0) { _drawFrame(_x, _y, _w, _h); return; }
@@ -432,7 +437,7 @@ public:
     }
   }
 
-  void _drawBMP(float _x, float _y, float _w, float _h, const uint8_t *_bitMap) override {
+  void _drawBMP(float _x, float _y, float _w, float _h, const uint8_t *_bitMap) {
     if (!_bitMap) return;
     int w = (int)_w, h = (int)_h;
     /* 行优先 XBM 格式 (LSB first): byteIdx = y*((w+7)/8) + x/8, bit = 1<<(x%8) */
@@ -448,7 +453,7 @@ public:
 
   /* ---- 文字绘制 ---- */
   /* _y 是左下角坐标, 转为左上角: yTop = _y - fontHeight */
-  void _drawEnglish(float _x, float _y, const std::string &_text) override {
+  void _drawEnglish(float _x, float _y, const std::string &_text) {
     float yTop = _y - 16;
     for (size_t i = 0; i < _text.length(); i++) {
       char c = _text[i];
@@ -464,24 +469,24 @@ public:
   }
 
   /* 无中文字库, 转发到英文绘制 (ASCII 部分正常, 非ASCII显示为空格) */
-  void _drawChinese(float _x, float _y, const std::string &_text) override {
+  void _drawChinese(float _x, float _y, const std::string &_text) {
     _drawEnglish(_x, _y, _text);
   }
 
   /* ---- 定时 ---- */
-  void _delay(unsigned long _mill) override { HAL_Delay(_mill); }
-  unsigned long _millis() override { return HAL_GetTick(); }
-  unsigned long _getTick() override { return HAL_GetTick(); }
-  unsigned long _getRandomSeed() override {
+  void _delay(unsigned long _mill) { HAL_Delay(_mill); }
+  unsigned long _millis() { return HAL_GetTick(); }
+  unsigned long _getTick() { return HAL_GetTick(); }
+  unsigned long _getRandomSeed() {
     return *(uint32_t *)0x1FFFF7E8 ^ HAL_GetTick();
   }
 
   /* ---- 蜂鸣器 / 屏幕电源 (不使用) ---- */
-  void _beep(float) override {}
-  void _beepStop() override {}
-  void _setBeepVol(uint8_t) override {}
-  void _screenOn() override {}
-  void _screenOff() override {}
+  void _beep(float) {}
+  void _beepStop() {}
+  void _setBeepVol(uint8_t) {}
+  void _screenOn() {}
+  void _screenOff() {}
 
   /* ---- 按键: 编码器旋钮 + SW 按钮 ---- */
   /* KEY_0 CLICK = 上一个 (编码器 CCW)
@@ -489,9 +494,9 @@ public:
    * KEY_1 PRESS = 打开/进入 (SW 短按 < 1s)
    * KEY_0 PRESS = 返回/关闭 (SW 长按 >= 1s)
    */
-  bool _getKey(key::KEY_INDEX) override { return false; }  /* 由 _keyScan 直接处理 */
+  bool _getKey(key::KEY_INDEX) { return false; }  /* 由 _keyScan 直接处理 */
 
-  bool _getAnyKey() override {
+  bool _getAnyKey() {
     /* 检查是否有待处理的按键动作 (非物理按键状态) */
     for (int i = 0; i < key::KEY_NUM; i++) {
       if (key[i] != key::RELEASE) return true;
@@ -499,7 +504,7 @@ public:
     return false;
   }
 
-  void _keyScan() override {
+  void _keyScan() {
     /* --- 编码器旋转 (4倍频, 累加到阈值才触发一次移动) --- */
     static int16_t encAccum = 0;
     int16_t encCount = Encoder_GetCount();
@@ -551,6 +556,10 @@ private:
   bool swLongTriggered = false;
 };
 
+#if defined(__CC_ARM)
+#pragma diag_default 1300
+#endif
+
 extern "C" int astraHalInit(void) {
   HAL *hal = new AstraHALPort();
   if (!HAL::inject(hal)) {
@@ -559,3 +568,4 @@ extern "C" int astraHalInit(void) {
   }
   return 0;
 }
+

@@ -9,28 +9,74 @@
 #include <vector>
 #include "astra_rocket.h"
 #include "astra_icons.h"
-
-extern "C" {
-#include "usart.h"
-}
+#include "ui/launcher.h"
+#include "app_config.h"
+#include "app_log.h"
 
 /* hal_port.cpp 中定义, 控制状态栏绘制 */
 extern bool bootScreenActive;
 
-astra::Launcher* astraLauncher = nullptr;
-astra::Menu* rootPage = nullptr;
+static astra::Launcher* astraLauncher = nullptr;
+static astra::Menu* rootPage = nullptr;
+static astra::Menu* toolPage = nullptr;
 
-std::vector<uint8_t> pic_home;  /* 延迟初始化 */
-std::vector<uint8_t> pic_gear;  /* 延迟初始化 */
-std::vector<uint8_t> pic_info;  /* 延迟初始化 */
-std::vector<uint8_t> pic_tool;  /* 延迟初始化 */
+static std::vector<uint8_t> pic_home;
+static std::vector<uint8_t> pic_gear;
+static std::vector<uint8_t> pic_info;
+static std::vector<uint8_t> pic_tool;
 
-/* 二级菜单 (工具页) */
-astra::Menu* toolPage = nullptr;
+static void drawCenteredText(const std::string &text, float baselineY) {
+  HAL::drawEnglish((128.0f - (float)(text.length() * 8)) / 2.0f, baselineY, text);
+}
 
-/* 诊断辅助: 单次输出 */
-static void dbgStep(const char* tag) {
-  uart_puts(tag);
+static void loadMenuIcons(void) {
+  pic_home.assign(pic_home_data, pic_home_data + sizeof(pic_home_data));
+  pic_gear.assign(pic_gear_data, pic_gear_data + sizeof(pic_gear_data));
+  pic_info.assign(pic_info_data, pic_info_data + sizeof(pic_info_data));
+  pic_tool.assign(pic_tool_data, pic_tool_data + sizeof(pic_tool_data));
+}
+
+static astra::Menu* createTile(const char *title, const std::vector<uint8_t> &icon) {
+  return new astra::Menu(title, icon);
+}
+
+static void addLeaf(astra::Menu *page, const char *title) {
+  page->addItem(new astra::Menu(title));
+}
+
+static void buildMenuTree(void) {
+  if (rootPage != nullptr) return;
+
+  rootPage = new astra::Menu("root");
+  if (pic_home.empty()) loadMenuIcons();
+
+  astra::Menu* homeTile = createTile("Home", pic_home);
+  astra::Menu* settingsTile = createTile("Settings", pic_gear);
+  astra::Menu* aboutTile = createTile("About", pic_info);
+  toolPage = createTile("Tools", pic_tool);
+
+  rootPage->addItem(homeTile);
+  rootPage->addItem(settingsTile);
+  rootPage->addItem(aboutTile);
+  rootPage->addItem(toolPage);
+
+  addLeaf(homeTile, "-Status");
+  addLeaf(homeTile, "-Uptime");
+  addLeaf(homeTile, "-Memory");
+
+  addLeaf(settingsTile, "-Brightness");
+  addLeaf(settingsTile, "-Contrast");
+  addLeaf(settingsTile, "-Reset");
+
+  addLeaf(aboutTile, "-Astra UI");
+  addLeaf(aboutTile, "-STM32F103");
+  addLeaf(aboutTile, "-ST7735S");
+
+  addLeaf(toolPage, "-Encoder");
+  addLeaf(toolPage, "-LCD Test");
+  addLeaf(toolPage, "-LED Blink");
+  addLeaf(toolPage, "-SPI DMA");
+  addLeaf(toolPage, "-Key Scan");
 }
 
 void astraShowBootScreen(void) {
@@ -43,17 +89,10 @@ void astraShowBootScreen(void) {
     HAL::canvasClear();
     HAL::setDrawType(1);
 
-    std::string title = "Dev-Beta";
-    HAL::drawEnglish((128.0f - (float)(title.length() * 8)) / 2.0f, 48, title);
-
-    std::string ver = "v0.3.5";
-    HAL::drawEnglish((128.0f - (float)(ver.length() * 8)) / 2.0f, 70, ver);
-
-    std::string hw = "STM32F103C8T6";
-    HAL::drawEnglish((128.0f - (float)(hw.length() * 8)) / 2.0f, 92, hw);
-
-    std::string lcd = "ST7735S 128x160";
-    HAL::drawEnglish((128.0f - (float)(lcd.length() * 8)) / 2.0f, 114, lcd);
+    drawCenteredText(APP_NAME, 48);
+    drawCenteredText(APP_VERSION, 70);
+    drawCenteredText(APP_TARGET_NAME, 92);
+    drawCenteredText(APP_LCD_BOOT_NAME, 114);
 
     HAL::canvasUpdate();
   }
@@ -64,56 +103,19 @@ void astraShowBootScreen(void) {
 void astraCoreInit(void) {
   /* HAL 实例需由用户在调用本函数前注入 (在 main 中调用 astraHalInit) */
   if (!HAL::check()) return;
-  dbgStep("[a1] check ok\r\n");
+  APP_LOG_INFO("astra", "step=hal_check status=ok");
 
   astraShowBootScreen();
 
   /* 延迟分配全局对象 (避免 C++ 全局构造阶段崩溃) */
   if (astraLauncher == nullptr) astraLauncher = new astra::Launcher();
-  dbgStep("[a2] new Launcher ok\r\n");
-  if (rootPage == nullptr) rootPage = new astra::Menu("root");
-  dbgStep("[a3] new Menu root ok\r\n");
-  if (toolPage == nullptr) {
-    pic_home.assign(pic_home_data, pic_home_data + sizeof(pic_home_data));
-    pic_gear.assign(pic_gear_data, pic_gear_data + sizeof(pic_gear_data));
-    pic_info.assign(pic_info_data, pic_info_data + sizeof(pic_info_data));
-    pic_tool.assign(pic_tool_data, pic_tool_data + sizeof(pic_tool_data));
-    toolPage = new astra::Menu("Tools", pic_tool);
-  }
-  dbgStep("[a4] toolpage ok\r\n");
+  APP_LOG_INFO("astra", "step=new_launcher status=ok");
 
-  /* ---- 一级菜单 (磁贴页) ---- */
-  astra::Menu* homeTile = new astra::Menu("Home", pic_home);
-  astra::Menu* settingsTile = new astra::Menu("Settings", pic_gear);
-  astra::Menu* aboutTile = new astra::Menu("About", pic_info);
-  rootPage->addItem(homeTile);
-  rootPage->addItem(settingsTile);
-  rootPage->addItem(aboutTile);
-  rootPage->addItem(toolPage);
-  dbgStep("[a5] root items ok\r\n");
-
-  /* ---- 二级菜单 (列表页) ---- */
-  homeTile->addItem(new astra::Menu("-Status"));
-  homeTile->addItem(new astra::Menu("-Uptime"));
-  homeTile->addItem(new astra::Menu("-Memory"));
-
-  settingsTile->addItem(new astra::Menu("-Brightness"));
-  settingsTile->addItem(new astra::Menu("-Contrast"));
-  settingsTile->addItem(new astra::Menu("-Reset"));
-
-  aboutTile->addItem(new astra::Menu("-Astra UI"));
-  aboutTile->addItem(new astra::Menu("-STM32F103"));
-  aboutTile->addItem(new astra::Menu("-ST7735S"));
-
-  toolPage->addItem(new astra::Menu("-Encoder"));
-  toolPage->addItem(new astra::Menu("-LCD Test"));
-  toolPage->addItem(new astra::Menu("-LED Blink"));
-  toolPage->addItem(new astra::Menu("-SPI DMA"));
-  toolPage->addItem(new astra::Menu("-Key Scan"));
-  dbgStep("[a6] tool items ok\r\n");
+  buildMenuTree();
+  APP_LOG_INFO("astra", "step=build_menu_tree status=ok root_items=4");
 
   astraLauncher->init(rootPage);
-  dbgStep("[a7] launcher init ok\r\n");
+  APP_LOG_INFO("astra", "step=launcher_init status=ok");
 }
 
 void astraCoreStart(void) {
@@ -143,4 +145,5 @@ void astraCoreDestroy(void) {
   astraLauncher = nullptr;
   delete rootPage;
   rootPage = nullptr;
+  toolPage = nullptr;
 }

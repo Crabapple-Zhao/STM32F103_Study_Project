@@ -11,7 +11,7 @@
 | 显示屏 | 1.8寸 TFT, ST7735S, 128x160, RGB565, SPI+DMA |
 | GUI | Astra UI 轻量级菜单框架 (1bpp 虚拟显存 ~2.5KB RAM) |
 | 接口 | 硬件 SPI1 (18MHz) + DMA1_Ch3, USART1 (115200bps) |
-| 调试 | SWD (ST-LINK), USB-UART (COM20) |
+| 调试 | SWD (ST-LINK), USB-UART (COM9) |
 | LED | PA11 心跳灯 (低电平点亮) |
 | 按键 | KEY1=PA0, KEY2=PC13 (高电平按下) |
 | 编码器 | A=PB6, B=PB7, SW=PB5 (TIM4 编码器模式) |
@@ -67,6 +67,8 @@ Dev-beta-STM32F103/
 ├── User/
 │   ├── main.cpp              # C++ 入口 (Astra UI 主循环)
 │   ├── main.h                # 主头文件
+│   ├── app_config.h          # 固件版本/目标硬件/串口等项目级常量
+│   ├── app_log.h             # 轻量级串口日志宏
 │   ├── bsp_init.c+h          # 板级初始化 + 中断处理函数
 ├── Startup/startup_stm32f103xb.s  # 启动文件 (Stack=1KB, Heap=4KB)
 ├── MDK-ARM/Project.uvprojx   # Keil MDK-ARM V5 工程 (C++ 模式, --gnu --cpp11)
@@ -91,7 +93,7 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code ~41KB, RO-data ~4.7KB, RW-data ~332B, ZI-data ~9.3KB (总计 ~46KB Flash / ~9.6KB SRAM)
+**编译资源占用**: Code 30224B, RO-data 4456B, RW-data 268B, ZI-data 17900B (Keil ARMCC V5.06, MicroLib)
 
 ## 架构说明
 
@@ -105,6 +107,7 @@ main.cpp (C++)
 - **Astra UI 框架** 原为 1bpp 单色 OLED 设计，移植层使用 2560 字节 1bpp 虚拟显存，
   canvasUpdate 时逐行转换为 RGB565 并通过 SPI+DMA 推送到 LCD
 - **HAL 抽象层** (`hal.h/cpp`) 定义绘图 API，`hal_port.cpp` 提供具体实现
+- **项目级配置** (`app_config.h`) 统一固件版本、目标硬件、显示屏名称和 USART 调试参数，避免多处字符串不一致
 - **菜单系统** 支持磁贴页 (TILE) 和列表页 (LIST) 两种风格，摄像机系统实现页面切换动画
 - **编码器输入** 旋转=上下导航，SW 短按=进入/确认，SW 长按=返回上一级
 - **中断处理函数** (`SysTick_Handler` / `DMA1_Channel3_IRQHandler`) 定义在 `bsp_init.c` 中，
@@ -113,4 +116,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.3.5** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.3.6** | 详见 [CHANGELOG.md](CHANGELOG.md)
