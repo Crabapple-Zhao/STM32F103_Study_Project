@@ -29,6 +29,9 @@ void astraCoreTest(void);
 //销毁启动器并释放 HAL 实例
 void astraCoreDestroy(void);
 
+//显示开机画面 (居中 Dev-Beta / 版本 / 硬件信息, 持续 2s)
+void astraShowBootScreen(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -9,7 +9,7 @@
 int main(void)
 {
     BSP_Init();
-    uart_puts("\r\n=== Dev-Beta v0.3.4 (Astra UI) ===\r\n");
+    uart_puts("\r\n=== Dev-Beta v0.3.5 (Astra UI) ===\r\n");
     astraHalInit();
     astraCoreInit();
 

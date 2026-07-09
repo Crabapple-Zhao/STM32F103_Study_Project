@@ -545,11 +545,6 @@
               <FilePath>..\Astra\hal\hal_port.cpp</FilePath>
             </File>
             <File>
-              <FileName>astra_logo.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\Astra\astra\astra_logo.cpp</FilePath>
-            </File>
-            <File>
               <FileName>astra_rocket.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\Astra\astra\astra_rocket.cpp</FilePath>

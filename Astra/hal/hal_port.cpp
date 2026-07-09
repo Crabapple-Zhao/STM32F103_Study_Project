@@ -45,6 +45,9 @@ static uint32_t fpsLastTick = 0;
 static uint32_t fpsFrameCount = 0;
 static uint8_t  currentFps = 0;
 
+/* 开机动画标志 — 置 true 时跳过状态栏绘制 */
+bool bootScreenActive = false;
+
 /* 设置状态栏标题 (供 launcher 调用) */
 extern "C" void astraSetStatusBarTitle(const char *title) {
   if (title == nullptr) { statusBarTitle[0] = 0; return; }
@@ -252,18 +255,20 @@ public:
 
   /* ---- 画布刷新: 1bpp → RGB565 → LCD (流式写入, 单次窗口设置) ---- */
   void _canvasUpdate() override {
-    /* 先在 canvasBuffer 顶部绘制状态栏 (覆盖 UI 在该区域的残留) */
-    drawStatusBar();
-    /* 再在 canvasBuffer 底部绘制状态栏 (覆盖 UI 在该区域的残留) */
-    drawBottomStatusBar();
+    if (!bootScreenActive) {
+      drawStatusBar();
+      drawBottomStatusBar();
+    }
 
     /* FPS 计算 (基于 canvasUpdate 调用次数) */
-    fpsFrameCount++;
-    uint32_t now = HAL_GetTick();
-    if (now - fpsLastTick >= 1000) {
-      currentFps = (uint8_t)(fpsFrameCount * 1000 / (now - fpsLastTick));
-      fpsFrameCount = 0;
-      fpsLastTick = now;
+    if (!bootScreenActive) {
+      fpsFrameCount++;
+      uint32_t now = HAL_GetTick();
+      if (now - fpsLastTick >= 1000) {
+        currentFps = (uint8_t)(fpsFrameCount * 1000 / (now - fpsLastTick));
+        fpsFrameCount = 0;
+        fpsLastTick = now;
+      }
     }
 
     LCD_WriteBegin();

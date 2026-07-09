@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-07-08
+
+### Added
+- **开机界面** — `astraShowBootScreen()` 居中显示 Dev-Beta / v0.3.5 / STM32F103C8T6 / ST7735S 128x160，持续 2 秒
+  - 开机期间通过 `bootScreenActive` 标志跳过顶部/底部状态栏绘制，纯净显示
+- `astra_icons.h` — 从 `astra_rocket.cpp` 抽离的 4 个磁贴图标数据 (home/gear/info/tool)
+
+### Changed
+- **工程文件解耦** — `astra_rocket.cpp` 不再内联图标数据，改为 include `astra_icons.h`
+- `main.cpp` 串口版本号更新为 v0.3.5
+
+### Removed
+- **删除废弃代码** `astra_logo.cpp` / `astra_logo.h` (旧 drawLogo 阻塞动画，因 1bpp→RGB565 转换过慢已跳过)
+
+### Fixed
+- **LCD 软复位残留** — `LCD_Init()` 在 display on (0x29) 之前增加 `LCD_Fill(0,0,127,159,0x0000)` 清屏，避免复位后短暂闪现上次主页画面
+
+---
+
 ## [0.3.4] - 2026-07-08
 
 ### Added

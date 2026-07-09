@@ -71,6 +71,8 @@ void LCD_Init(void)
     lcd_data8(0x27);lcd_data8(0x25);lcd_data8(0x2D);lcd_data8(0x3B);
     lcd_data8(0x00);lcd_data8(0x01);lcd_data8(0x04);lcd_data8(0x13);
     lcd_cmd(0x3A); lcd_data8(0x05);
+    /* display on 之前先清屏, 避免软复位后 LCD GRAM 残留上次画面 (如主页) 被短暂显示 */
+    LCD_Fill(0, 0, 127, 159, 0x0000);
     lcd_cmd(0x29);
 }
 

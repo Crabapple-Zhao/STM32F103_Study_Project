@@ -62,8 +62,8 @@ Dev-beta-STM32F103/
 │       │   ├── launcher.h/cpp # 调度器 (页面切换/动画/摄像机)
 │       │   └── element/page/
 │       │       └── item.h/cpp # 菜单/选择器/摄像机类
-│       ├── astra_logo.h/cpp   # Logo 启动动画
-│       └── astra_rocket.h/cpp # 启动入口 (菜单树定义 + astraLoop)
+│       ├── astra_icons.h      # 菜单磁贴图标数据 (home/gear/info/tool, 32x32 1bpp)
+│       └── astra_rocket.h/cpp # 启动入口 (开机画面 + 菜单树定义 + astraLoop)
 ├── User/
 │   ├── main.cpp              # C++ 入口 (Astra UI 主循环)
 │   ├── main.h                # 主头文件
@@ -113,4 +113,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.3.4** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.3.5** | 详见 [CHANGELOG.md](CHANGELOG.md)
