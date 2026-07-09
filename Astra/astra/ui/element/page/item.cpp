@@ -31,6 +31,10 @@
 
 namespace astra {
 
+static bool floatClose(float lhs, float rhs) {
+  return std::fabs(lhs - rhs) < 0.2f;
+}
+
 void Item::updateConfig() {
   this->systemConfig = HAL::getSystemConfig();
   this->astraConfig = getUIConfig();
@@ -189,6 +193,25 @@ void Menu::render(std::vector<float> _camera) {
   }
 }
 
+bool Menu::isSettled() const {
+  for (auto _iter : child) {
+    if (!floatClose(_iter->position.x, _iter->position.xTrg)) return false;
+    if (!floatClose(_iter->position.y, _iter->position.yTrg)) return false;
+  }
+
+  if (childType == TILE) {
+    if (!floatClose(positionForeground.yArrow, positionForeground.yArrowTrg)) return false;
+    if (!floatClose(positionForeground.yDottedLine, positionForeground.yDottedLineTrg)) return false;
+    if (!floatClose(positionForeground.wBar, positionForeground.wBarTrg)) return false;
+    if (!floatClose(positionForeground.yBar, positionForeground.yBarTrg)) return false;
+  } else if (childType == LIST) {
+    if (!floatClose(positionForeground.hBar, positionForeground.hBarTrg)) return false;
+    if (!floatClose(positionForeground.xBar, positionForeground.xBarTrg)) return false;
+  }
+
+  return true;
+}
+
 uint8_t Menu::getItemNum() const {
   return child.size();
 }
@@ -266,6 +289,19 @@ void Selector::go(uint8_t _index) {
   }
 }
 
+bool Selector::isSettled() const {
+  if (!floatClose(x, xTrg)) return false;
+  if (!floatClose(y, yTrg)) return false;
+  if (!floatClose(w, wTrg)) return false;
+  if (!floatClose(h, hTrg)) return false;
+
+  if (menu != nullptr && menu->childType == Menu::TILE) {
+    if (!floatClose(yText, yTextTrg)) return false;
+  }
+
+  return true;
+}
+
 bool Selector::inject(Menu *_menu) {
   if (_menu == nullptr) return false;
 
@@ -321,6 +357,11 @@ void Selector::render(std::vector<float> _camera) {
 
     HAL::drawPixel(x + _camera[0] + w - 1, y + _camera[1] + h - 1);
   } else if (menu->childType == Menu::LIST) {
+    if (!menu->isSettled()) {
+      x = menu->child[menu->selectIndex]->position.x - astraConfig.selectorMargin;
+      y = menu->child[menu->selectIndex]->position.y;
+    }
+
     //animation(&h, hTrg, astraConfig.selectorAnimationSpeed);
 
     //draw select box.
@@ -366,8 +407,8 @@ Camera::Camera(float _x, float _y) {
  * @return 0: in view, 1: upper, 2: lower
  */
 uint8_t Camera::outOfView(float _x, float _y) {
-  if (_x < 0 - this->x | _y < 0 - this->y) return 1;
-  if (_x > (0 - this->x) + systemConfig.screenWeight - 1 | _y > (0 - this->y) + systemConfig.screenHeight - 1) return 2;
+  if (_x < 0 - this->x || _y < 0 - this->y) return 1;
+  if (_x > (0 - this->x) + systemConfig.screenWeight - 1 || _y > (0 - this->y) + systemConfig.screenHeight - 1) return 2;
   return 0;
 }
 
@@ -451,22 +492,17 @@ void Camera::goToListItemRolling(std::vector<float> _posSelector) {
   //最开始左端点是0 右端点是max-1
   //index超过右端点 就向下滚动index-右端点行 同时左右端点都加上index-右端点
 
-  static uint8_t direction = 0; //0: no roll, 1: up, 2: down
+  uint8_t direction = outOfView(_posSelector[0], _posSelector[1]); //0: no roll, 1: up, 2: down
 
   moving = true;
-  if (outOfView(_posSelector[0], _posSelector[1]) == 1) direction = 1;
-  if (outOfView(_posSelector[0], _posSelector[1]) == 2) direction = 2;
 
   if (direction == 1) {
     go(_posSelector[0], _posSelector[1]);
-    if (this->x == 0 - _posSelector[0] && this->y == 0 - _posSelector[1]) direction = 0;
-  }
-  if (direction == 2) {
+  } else if (direction == 2) {
     go(_posSelector[0], _posSelector[1] + astraConfig.listLineHeight - systemConfig.screenHeight);
-    if (this->x == 0 - _posSelector[0] && this->y == 0 - (_posSelector[1] + astraConfig.listLineHeight - systemConfig.screenHeight)) direction = 0;
+  } else {
+    moving = false;
   }
-
-  if (!outOfView(_posSelector[0], _posSelector[1])) moving = false;
 }
 
 void Camera::goToTileItem(uint8_t _index) {

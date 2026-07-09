@@ -35,7 +35,7 @@ struct config {
   bool listUnfold = true;
 
   bool tileLoop = true;
-  bool menuLoop = true;
+  bool menuLoop = false;
 
   bool backgroundBlur = true;
   bool lightMode = false;

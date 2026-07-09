@@ -71,12 +71,15 @@ bool Launcher::open() {
   //todo 打开和关闭都还没写完 应该还漏掉了一部分内容
 
   //如果当前页面指向的当前item没有后继 那就返回false
-  if (currentPage->getNext() == nullptr) return false;
-  if (currentPage->getNext()->getItemNum() == 0) return false;
+  Menu *nextPage = currentPage->getNext();
+  if (nextPage == nullptr) return false;
+  if (nextPage->getItemNum() == 0) return false;
 
   currentPage->deInit();  //先析构（退场动画）再挪动指针
 
-  currentPage = currentPage->getNext();
+  currentPage = nextPage;
+  currentPage->selectIndex = 0;
+  camera->goDirect(0, 0);
   currentPage->init(camera->getPosition());
 
   selector->inject(currentPage);
@@ -113,10 +116,6 @@ bool Launcher::close() {
 void Launcher::update() {
   HAL::canvasClear();
 
-  currentPage->render(camera->getPosition());
-  selector->render(camera->getPosition());
-  camera->update(currentPage, selector);
-
   //按键扫描与菜单导航
   //KEY_0 短按=上一个  KEY_1 短按=下一个
   //KEY_0 长按=返回上一级  KEY_1 长按=打开选中项
@@ -144,6 +143,10 @@ void Launcher::update() {
     }
     HAL::clearKeyAction();
   }
+
+  currentPage->render(camera->getPosition());
+  selector->render(camera->getPosition());
+  camera->update(currentPage, selector);
 
   HAL::canvasUpdate();
 

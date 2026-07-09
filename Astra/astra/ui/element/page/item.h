@@ -148,6 +148,7 @@ public:
   void deInit(); //每次关闭页面都要调用一次
 
   void render(std::vector<float> _camera);  //render all child item.
+  bool isSettled() const;
   uint8_t getItemNum() const;
   Position getItemPosition(uint8_t _index) const;
   Menu* getNext() const;  //启动器调用该方法来获取下一个页面
@@ -160,20 +161,20 @@ public:
 
 class Selector : public Item, public Animation {
 private:
-  Menu* menu;
+  Menu* menu = nullptr;
 
 public:
   //列表页中就是选择框的坐标 磁贴页中就是大框的坐标
-  float x, xTrg;
-  float y, yTrg;
+  float x = 0, xTrg = 0;
+  float y = 0, yTrg = 0;
 
   /*LIST*/
-  float w, wTrg;
-  float h, hTrg;
+  float w = 0, wTrg = 0;
+  float h = 0, hTrg = 0;
   /*LIST*/
 
   /*TILE*/
-  float yText, yTextTrg;  //磁贴页标题坐标
+  float yText = 0, yTextTrg = 0;  //磁贴页标题坐标
   /*TILE*/
 
   Selector() = default;
@@ -184,6 +185,7 @@ public:
   std::vector<float> getPosition();
 
   void go(uint8_t _index);
+  bool isSettled() const;
 
   bool inject(Menu* _menu); //inject menu instance to prepare for render.
   bool destroy(); //destroy menu instance.

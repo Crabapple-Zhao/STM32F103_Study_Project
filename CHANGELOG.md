@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2026-07-09
+
+### Changed
+- **UI 导航边界** — 关闭菜单循环跳转，光标在首项/末项时不再跨到另一端元素。
+- **二级菜单入场** — 每次进入子菜单都重置选中第一项，不再记忆上次退出时的光标位置。
+
+### Fixed
+- **入场期间编码器输入** — 先处理输入再渲染，二级菜单元素入场动画未完成时旋转编码器，光标能够立即响应目标项。
+- **列表滚动状态残留** — 列表入场时光标绘制位置跟随元素实时位置，但相机滚动判断仍使用最终目标坐标；去掉 `Camera::goToListItemRolling()` 的跨页面 `static direction` 残留，避免下次进入时列表自动滚动。
+- **Camera 边界判断** — `Camera::outOfView()` 使用逻辑或 `||` 替代位运算或 `|`，让越界判断更清晰。
+
+---
+
 ## [0.3.6] - 2026-07-09
 
 ### Changed

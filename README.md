@@ -93,7 +93,7 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code 30224B, RO-data 4456B, RW-data 268B, ZI-data 17900B (Keil ARMCC V5.06, MicroLib)
+**编译资源占用**: Code 30796B, RO-data 4352B, RW-data 268B, ZI-data 17900B (Keil ARMCC V5.06, MicroLib)
 
 ## 架构说明
 
@@ -116,4 +116,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.3.6** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.3.7** | 详见 [CHANGELOG.md](CHANGELOG.md)
