@@ -53,7 +53,9 @@ struct config {
   float tilePicWidth = 30;
   float tilePicHeight = 30;
   float tilePicMargin = 8;
-  float tilePicTopMargin = 8; //图标上边距
+  float tileSelectedPicWidth = 36;
+  float tileSelectedPicHeight = 36;
+  float tilePicTopMargin = 24; //图标上边距
   float tileArrowWidth = 6;
   float tileArrowMargin = 4; //箭头边距
 
@@ -66,8 +68,8 @@ struct config {
 
   float tileSelectBoxLineLength = 5;  //磁贴选择框线长
   float tileSelectBoxMargin = 3; //选择框边距
-  float tileSelectBoxWidth = tileSelectBoxMargin * 2 + tilePicWidth; //选择框宽
-  float tileSelectBoxHeight = tileSelectBoxMargin * 2 + tilePicHeight; //选择框高
+  float tileSelectBoxWidth = tileSelectBoxMargin * 2 + tileSelectedPicWidth; //选择框宽
+  float tileSelectBoxHeight = tileSelectBoxMargin * 2 + tileSelectedPicHeight; //选择框高
   float tileTitleHeight = 16; //磁贴标题高度 (适配 8x16 字体)
 
   float tileBtnMargin = 16; //按钮边距

@@ -60,10 +60,14 @@ extern "C" void astraSetStatusBarTitle(const char *title) {
 /* ---- 顶部状态栏右侧图标 ---- */
 #define ICON_GAP 2
 
+typedef struct StatusIcon {
+  const uint8_t *data;
+  uint8_t w;
+  uint8_t h;
+} StatusIcon;
+
 /* 电池 16×10 (横向, 左侧正极凸起, 填充约 80%, 偏右 1px) */
-#define BAT_W 16
-#define BAT_H 10
-static const uint8_t icon_battery[] = {
+static const uint8_t icon_battery_bitmap[] = {
   /* Row 0 */ 0x00, 0x00,
   /* Row 1: body top (14px, p2~p15) */ 0xFC, 0xFF,
   /* Row 2: nub(p0,p1) + wall(p2) + gap + wall(p15) */ 0x07, 0x80,
@@ -75,29 +79,63 @@ static const uint8_t icon_battery[] = {
   /* Row 8: body bottom */ 0xFC, 0xFF,
   /* Row 9 */ 0x00, 0x00,
 };
+static const StatusIcon STATUS_ICON_BATTERY = { icon_battery_bitmap, 16, 10 };
 
-/* WiFi 8×8 (待优化) */
-#define WIFI_W 8
-#define WIFI_H 8
-static const uint8_t icon_wifi[] = {
-  0x18, 0x3C, 0x42, 0x18, 0x00, 0x24, 0x18, 0x00
+/*
+ * WiFi 14x10, locked pixel art.
+ * Geometry: three concentric arcs, center=(12,9), radii=2/5/8,
+ * angle range 180deg..90deg. Keep all arcs concentric; do not shift
+ * the inner arc independently or it will look skewed on the TFT.
+ *
+ * Pixel preview (# = on):
+ * ..............
+ * .........####.
+ * ........##....
+ * ......##......
+ * ......#...###.
+ * .....#...##...
+ * ....##..#.....
+ * ....#..##..##.
+ * ....#..#..##..
+ * ....#..#..#...
+ */
+static const uint8_t icon_wifi_bitmap[] = {
+  /* Row 0 */ 0x00, 0x00,
+  /* Row 1 */ 0x00, 0x1E,
+  /* Row 2 */ 0x00, 0x03,
+  /* Row 3 */ 0xC0, 0x00,
+  /* Row 4 */ 0x40, 0x1C,
+  /* Row 5 */ 0x20, 0x06,
+  /* Row 6 */ 0x30, 0x01,
+  /* Row 7 */ 0x90, 0x19,
+  /* Row 8 */ 0x90, 0x0C,
+  /* Row 9 */ 0x90, 0x04,
 };
+static const StatusIcon STATUS_ICON_WIFI = { icon_wifi_bitmap, 14, 10 };
 
-/* SD 卡 8×8 (待优化) */
-#define SD_W 8
-#define SD_H 8
-static const uint8_t icon_sd[] = {
-  0x7E, 0x42, 0x42, 0x42, 0x7E, 0x42, 0x42, 0x7E
+/* TF card 14x10, filled silhouette with clipped upper-right corner and contact slots */
+static const uint8_t icon_tf_bitmap[] = {
+  /* Row 0 */ 0x00, 0x00,
+  /* Row 1 */ 0xFE, 0x03,
+  /* Row 2 */ 0xFE, 0x0F,
+  /* Row 3 */ 0xFE, 0x21,
+  /* Row 4 */ 0xFE, 0x3F,
+  /* Row 5 */ 0xFE, 0x21,
+  /* Row 6 */ 0xFE, 0x3F,
+  /* Row 7 */ 0xFE, 0x21,
+  /* Row 8 */ 0xFE, 0x3F,
+  /* Row 9 */ 0x00, 0x00,
 };
+static const StatusIcon STATUS_ICON_TF = { icon_tf_bitmap, 14, 10 };
 
 /* 绘制小型图标到 canvasBuffer (LSB-first, 直接写显存, 支持多字节行宽) */
-static void drawIcon(int x, int y, const uint8_t *data, int w, int h) {
-  int bytesPerRow = (w + 7) / 8;
-  for (int row = 0; row < h; row++) {
-    for (int col = 0; col < w; col++) {
+static void drawIcon(int x, int y, const StatusIcon *icon) {
+  int bytesPerRow = (icon->w + 7) / 8;
+  for (int row = 0; row < icon->h; row++) {
+    for (int col = 0; col < icon->w; col++) {
       int byteIdx = row * bytesPerRow + col / 8;
       int bitIdx  = col % 8;
-      if (data[byteIdx] & (1 << bitIdx)) {
+      if (icon->data[byteIdx] & (1 << bitIdx)) {
         int px = x + col, py = y + row;
         if (px >= 0 && px < ASTRA_SCREEN_W && py >= 0 && py < ASTRA_SCREEN_H) {
           canvasBuffer[px + (py / 8) * ASTRA_SCREEN_W] |= (1 << (py % 8));
@@ -105,6 +143,13 @@ static void drawIcon(int x, int y, const uint8_t *data, int w, int h) {
       }
     }
   }
+}
+
+static int drawStatusIconFromRight(int rightX, const StatusIcon *icon) {
+  int x = rightX - icon->w;
+  int y = (STATUS_BAR_H - icon->h) / 2;
+  drawIcon(x, y, icon);
+  return x - ICON_GAP;
 }
 
 /* 在 canvasBuffer 顶部绘制状态栏 (y=0~STATUS_BAR_H-1) */
@@ -136,18 +181,12 @@ static void drawStatusBar() {
     }
   }
 
-  /* 3. 右侧静态图标: WiFi(8×8) | SD卡(8×8) | 电池(16×10) */
+  /* 3. 右侧静态图标: TF卡(14×10) | WiFi(14×10) | 电池(16×10) */
   {
-    int iconY;
-    int iconX = ASTRA_SCREEN_W - ICON_GAP - BAT_W;
-    iconY = (STATUS_BAR_H - BAT_H) / 2;
-    drawIcon(iconX, iconY, icon_battery, BAT_W, BAT_H);
-    iconX -= ICON_GAP + SD_W;
-    iconY = (STATUS_BAR_H - SD_H) / 2;
-    drawIcon(iconX, iconY, icon_sd, SD_W, SD_H);
-    iconX -= ICON_GAP + WIFI_W;
-    iconY = (STATUS_BAR_H - WIFI_H) / 2;
-    drawIcon(iconX, iconY, icon_wifi, WIFI_W, WIFI_H);
+    int iconRight = ASTRA_SCREEN_W - ICON_GAP;
+    iconRight = drawStatusIconFromRight(iconRight, &STATUS_ICON_BATTERY);
+    iconRight = drawStatusIconFromRight(iconRight, &STATUS_ICON_WIFI);
+    drawStatusIconFromRight(iconRight, &STATUS_ICON_TF);
   }
 
   /* 4. 画底部分隔线 (y=STATUS_BAR_H-1) */

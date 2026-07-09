@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] - 2026-07-09
+
+### Changed
+- **状态栏图标封装** — 将 TF/WiFi/电池图标整理为统一 `StatusIcon` 描述结构，右侧状态栏图标通过统一 helper 从右向左绘制，方便后续替换和复用。
+- **状态栏图标重绘** — 重绘 TF 卡、WiFi 和电池区域图标；TF 卡保留斜切缺角与 4px 金属触点槽，WiFi 图标固化为三段同心弧点阵。
+- **主页磁贴布局** — 主页 4 个磁贴图标整体下移，减少下方空白；当前选中图标放大显示，光标移走后恢复原尺寸。
+
+### Fixed
+- **页面切换闪屏** — 暂停未完成的 `exitAnimation()` 退场遮罩，避免进入/退出二级菜单时偶发改写 canvas 导致闪屏。
+
+---
+
 ## [0.3.7] - 2026-07-09
 
 ### Changed

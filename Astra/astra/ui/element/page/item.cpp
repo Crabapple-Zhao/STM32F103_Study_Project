@@ -35,6 +35,27 @@ static bool floatClose(float lhs, float rhs) {
   return std::fabs(lhs - rhs) < 0.2f;
 }
 
+static void drawScaledBitmap(float dstX,
+                             float dstY,
+                             uint8_t dstW,
+                             uint8_t dstH,
+                             uint8_t srcW,
+                             uint8_t srcH,
+                             const uint8_t *bitmap) {
+  if (bitmap == nullptr) return;
+
+  uint8_t bytesPerRow = (srcW + 7) / 8;
+  for (uint8_t y = 0; y < dstH; y++) {
+    uint8_t srcY = (uint16_t)y * srcH / dstH;
+    for (uint8_t x = 0; x < dstW; x++) {
+      uint8_t srcX = (uint16_t)x * srcW / dstW;
+      uint16_t byteIdx = srcY * bytesPerRow + srcX / 8;
+      uint8_t bit = 1 << (srcX % 8);
+      if (bitmap[byteIdx] & bit) HAL::drawPixel(dstX + x, dstY + y);
+    }
+  }
+}
+
 void Item::updateConfig() {
   this->systemConfig = HAL::getSystemConfig();
   this->astraConfig = getUIConfig();
@@ -109,7 +130,6 @@ void Menu::init(std::vector<float> _camera) {
 
 void Menu::deInit() {
   //todo 未实现完全
-  exitAnimation();
 }
 
 void Menu::render(std::vector<float> _camera) {
@@ -119,8 +139,20 @@ void Menu::render(std::vector<float> _camera) {
     HAL::setDrawType(1);
 
     //draw pic.
-    for (auto _iter : child) {
-      HAL::drawBMP(_iter->position.x + _camera[0], astraConfig.tilePicTopMargin + _camera[1], astraConfig.tilePicWidth, astraConfig.tilePicHeight, _iter->pic.empty() ? nullptr : &_iter->pic[0]);
+    for (uint8_t i = 0; i < child.size(); i++) {
+      auto _iter = child[i];
+      bool selected = (i == selectIndex);
+      float picW = selected ? astraConfig.tileSelectedPicWidth : astraConfig.tilePicWidth;
+      float picH = selected ? astraConfig.tileSelectedPicHeight : astraConfig.tilePicHeight;
+      float picX = _iter->position.x - (picW - astraConfig.tilePicWidth) / 2.0f + _camera[0];
+      float picY = astraConfig.tilePicTopMargin - (picH - astraConfig.tilePicHeight) / 2.0f + _camera[1];
+      drawScaledBitmap(picX,
+                       picY,
+                       (uint8_t)picW,
+                       (uint8_t)picH,
+                       (uint8_t)astraConfig.tilePicWidth,
+                       (uint8_t)astraConfig.tilePicHeight,
+                       _iter->pic.empty() ? nullptr : &_iter->pic[0]);
       //这里的xTrg在addItem的时候就已经确定了
       animation(&_iter->position.x, _iter->position.xTrg, astraConfig.tileAnimationSpeed);
     }
@@ -272,8 +304,12 @@ void Selector::go(uint8_t _index) {
   if (menu->childType == Menu::TILE) {
 //    xTrg = menu->child[_index]->position.xTrg - (astraConfig.tileSelectBoxWeight - astraConfig.tilePicWidth) / 2;
 //    yTrg = menu->child[_index]->position.yTrg - (astraConfig.tileSelectBoxHeight - astraConfig.tilePicHeight) / 2;
-      xTrg = menu->child[_index]->position.xTrg - astraConfig.tileSelectBoxMargin;
-      yTrg = menu->child[_index]->position.yTrg - astraConfig.tileSelectBoxMargin;
+      xTrg = menu->child[_index]->position.xTrg
+          - (astraConfig.tileSelectedPicWidth - astraConfig.tilePicWidth) / 2.0f
+          - astraConfig.tileSelectBoxMargin;
+      yTrg = menu->child[_index]->position.yTrg
+          - (astraConfig.tileSelectedPicHeight - astraConfig.tilePicHeight) / 2.0f
+          - astraConfig.tileSelectBoxMargin;
 
       yText = systemConfig.screenHeight; //给磁贴文字归零 从屏幕外滑入
       yTextTrg = systemConfig.screenHeight - astraConfig.tileTextBottomMargin;
