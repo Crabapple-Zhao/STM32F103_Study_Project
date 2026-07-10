@@ -24,6 +24,15 @@ int astraHalInit(void);
  */
 void astraSetStatusBarTitle(const char *title);
 
+typedef struct {
+  uint32_t ramBytes;
+  uint32_t romBytes;
+  uint32_t ramPercent;
+  uint32_t romPercent;
+} AstraMemoryUsage;
+
+void astraGetMemoryUsage(AstraMemoryUsage *usage);
+
 #ifdef __cplusplus
 }
 #endif

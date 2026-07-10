@@ -55,14 +55,14 @@ struct config {
   float tilePicMargin = 8;
   float tileSelectedPicWidth = 36;
   float tileSelectedPicHeight = 36;
-  float tilePicTopMargin = 24; //图标上边距
+  float tilePicTopMargin = 26; //图标上边距
   float tileArrowWidth = 6;
   float tileArrowMargin = 4; //箭头边距
 
   //适配 128x160 屏幕 + 16px 字体
   float tileDottedLineBottomMargin = 28; //虚线下边距 (160-28=132)
   float tileArrowBottomMargin = 8; //箭头下边距 (160-8=152)
-  float tileTextBottomMargin = 20; //标题下边距 (160-20=140, text bottom=140+16=156)
+  float tileTextBottomMargin = 22; //标题下边距
 
   float tileBarHeight = 2; //磁贴进度条高度
 
@@ -89,9 +89,6 @@ struct config {
   const uint8_t *mainFont = nullptr;
 };
 
-static config &getUIConfig() {
-  static config astraConfig;
-  return astraConfig;
-}
+config &getUIConfig();
 }
 #endif //ASTRA_CORE_SRC_SYSTEM_H_

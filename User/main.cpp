@@ -8,6 +8,46 @@
 #include "hal_port.h"
 #include "astra_rocket.h"
 
+static void appendText(char *buf, int *pos, const char *text)
+{
+    for (int i = 0; text[i]; i++) buf[(*pos)++] = text[i];
+}
+
+static void appendUInt(char *buf, int *pos, uint32_t value)
+{
+    if (value == 0) {
+        buf[(*pos)++] = '0';
+        return;
+    }
+    char tmp[10];
+    int len = 0;
+    while (value > 0) {
+        tmp[len++] = '0' + value % 10U;
+        value /= 10U;
+    }
+    while (len > 0) buf[(*pos)++] = tmp[--len];
+}
+
+static void logMemoryUsage(void)
+{
+    AstraMemoryUsage usage;
+    astraGetMemoryUsage(&usage);
+
+    char buf[96];
+    int p = 0;
+    appendText(buf, &p, "[INFO] [memory] ram=");
+    appendUInt(buf, &p, usage.ramBytes);
+    appendText(buf, &p, " ram_pct=");
+    appendUInt(buf, &p, usage.ramPercent);
+    appendText(buf, &p, " rom=");
+    appendUInt(buf, &p, usage.romBytes);
+    appendText(buf, &p, " rom_pct=");
+    appendUInt(buf, &p, usage.romPercent);
+    appendText(buf, &p, "\r\n");
+    buf[p] = 0;
+    uart_puts(buf);
+}
+
 int main(void)
 {
     BSP_Init();
@@ -16,6 +56,7 @@ int main(void)
               " ui=" APP_UI_NAME
               " target=" APP_TARGET_NAME
               " lcd=" APP_LCD_NAME "\r\n");
+    logMemoryUsage();
     astraHalInit();
     astraCoreInit();
 

@@ -25,6 +25,13 @@ static std::vector<uint8_t> pic_gear;
 static std::vector<uint8_t> pic_info;
 static std::vector<uint8_t> pic_tool;
 
+namespace astra {
+config &getUIConfig() {
+  static config astraConfig;
+  return astraConfig;
+}
+}
+
 static void drawCenteredText(const std::string &text, float baselineY) {
   HAL::drawEnglish((128.0f - (float)(text.length() * 8)) / 2.0f, baselineY, text);
 }

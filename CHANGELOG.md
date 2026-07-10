@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] - 2026-07-10
+
+### Changed
+- 底部状态栏倒数第二行改为 `RAM:% ROM:%` 百分比显示，最后一行保留左侧运行时间和右侧 FPS。
+- 复位启动串口日志新增一次 RAM/ROM 字节数和百分比输出，便于烧录后通过 COM9 验证。
+
+### Fixed
+- 修正 ARMCC linker absolute symbol 读取方式，避免 ROM 占用率在屏幕上误显示为 100%。
+
+---
+
 ## [0.3.8] - 2026-07-09
 
 ### Changed

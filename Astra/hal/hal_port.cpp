@@ -35,9 +35,9 @@ static uint8_t lineBuf[ASTRA_SCREEN_W * 2];
 #define BG_COLOR  0x0000  /* 黑色 */
 
 /* ---- 状态栏 ---- */
-#define STATUS_BAR_H   16   /* 顶部状态栏高度 (像素) */
+#define STATUS_BAR_H   20   /* 顶部状态栏高度 (像素) */
 #define BOTTOM_BAR_H   32   /* 底部状态栏高度 (像素, 顶部的 2 倍) */
-#define UI_OFFSET_Y    16   /* UI 内容在 canvasBuffer 中的 y 偏移 (避开顶部状态栏) */
+#define UI_OFFSET_Y    STATUS_BAR_H   /* UI 内容在 canvasBuffer 中的 y 偏移 (避开顶部状态栏) */
 #define UI_MAX_Y       (ASTRA_SCREEN_H - BOTTOM_BAR_H)  /* UI 内容最大 y 坐标 = 128, 避开底部状态栏 */
 static char statusBarTitle[20] = {0};  /* 顶部状态栏标题文本 */
 
@@ -49,6 +49,14 @@ static uint8_t  currentFps = 0;
 /* 开机动画标志 — 置 true 时跳过状态栏绘制 */
 bool bootScreenActive = false;
 
+static int getDrawOffsetY() {
+  return bootScreenActive ? 0 : UI_OFFSET_Y;
+}
+
+static int getDrawMaxY() {
+  return bootScreenActive ? ASTRA_SCREEN_H : UI_MAX_Y;
+}
+
 /* 设置状态栏标题 (供 launcher 调用) */
 extern "C" void astraSetStatusBarTitle(const char *title) {
   if (title == nullptr) { statusBarTitle[0] = 0; return; }
@@ -59,6 +67,8 @@ extern "C" void astraSetStatusBarTitle(const char *title) {
 
 /* ---- 顶部状态栏右侧图标 ---- */
 #define ICON_GAP 2
+#define STATUS_TEXT_W 8
+#define STATUS_TEXT_H 16
 
 typedef struct StatusIcon {
   const uint8_t *data;
@@ -70,12 +80,12 @@ typedef struct StatusIcon {
 static const uint8_t icon_battery_bitmap[] = {
   /* Row 0 */ 0x00, 0x00,
   /* Row 1: body top (14px, p2~p15) */ 0xFC, 0xFF,
-  /* Row 2: nub(p0,p1) + wall(p2) + gap + wall(p15) */ 0x07, 0x80,
-  /* Row 3: nub + wall + gap(p3) + fill(p4~p13) + gap(p14) + wall */ 0xF7, 0xBF,
-  /* Row 4 */ 0xF7, 0xBF,
-  /* Row 5 */ 0xF7, 0xBF,
-  /* Row 6 */ 0xF7, 0xBF,
-  /* Row 7: nub + wall + gap + wall */ 0x07, 0x80,
+  /* Row 2: leftmost column clipped */ 0x06, 0x80,
+  /* Row 3: leftmost column clipped */ 0xF6, 0xBF,
+  /* Row 4 */ 0xF6, 0xBF,
+  /* Row 5 */ 0xF6, 0xBF,
+  /* Row 6 */ 0xF6, 0xBF,
+  /* Row 7: leftmost column clipped */ 0x06, 0x80,
   /* Row 8: body bottom */ 0xFC, 0xFF,
   /* Row 9 */ 0x00, 0x00,
 };
@@ -83,33 +93,32 @@ static const StatusIcon STATUS_ICON_BATTERY = { icon_battery_bitmap, 16, 10 };
 
 /*
  * WiFi 14x10, locked pixel art.
- * Geometry: three concentric arcs, center=(12,9), radii=2/5/8,
- * angle range 180deg..90deg. Keep all arcs concentric; do not shift
- * the inner arc independently or it will look skewed on the TFT.
+ * Geometry: two concentric arcs plus one center dot, shifted 1px left.
+ * Keep the pixel art fixed unless the status icon is being tuned.
  *
  * Pixel preview (# = on):
  * ..............
- * .........####.
- * ........##....
- * ......##......
- * ......#...###.
- * .....#...##...
- * ....##..#.....
- * ....#..##..##.
- * ....#..#..##..
- * ....#..#..#...
+ * ........####..
+ * .......##.....
+ * .....##.......
+ * .....#...###..
+ * ....#...##....
+ * ...##..#......
+ * ...#..##....#.
+ * ...#..#...##..
+ * ...#..#..###..
  */
 static const uint8_t icon_wifi_bitmap[] = {
   /* Row 0 */ 0x00, 0x00,
-  /* Row 1 */ 0x00, 0x1E,
-  /* Row 2 */ 0x00, 0x03,
-  /* Row 3 */ 0xC0, 0x00,
-  /* Row 4 */ 0x40, 0x1C,
-  /* Row 5 */ 0x20, 0x06,
-  /* Row 6 */ 0x30, 0x01,
-  /* Row 7 */ 0x90, 0x19,
-  /* Row 8 */ 0x90, 0x0C,
-  /* Row 9 */ 0x90, 0x04,
+  /* Row 1 */ 0x00, 0x0F,
+  /* Row 2 */ 0x80, 0x01,
+  /* Row 3 */ 0x60, 0x00,
+  /* Row 4 */ 0x20, 0x0E,
+  /* Row 5 */ 0x10, 0x03,
+  /* Row 6 */ 0x98, 0x00,
+  /* Row 7 */ 0xC8, 0x08,
+  /* Row 8 */ 0x48, 0x0C,
+  /* Row 9 */ 0x48, 0x0E,
 };
 static const StatusIcon STATUS_ICON_WIFI = { icon_wifi_bitmap, 14, 10 };
 
@@ -128,7 +137,19 @@ static const uint8_t icon_tf_bitmap[] = {
 };
 static const StatusIcon STATUS_ICON_TF = { icon_tf_bitmap, 14, 10 };
 
+static const StatusIcon *const STATUS_ICON_LAYOUT[] = {
+  &STATUS_ICON_BATTERY,
+  &STATUS_ICON_WIFI,
+  &STATUS_ICON_TF,
+};
+
 /* 绘制小型图标到 canvasBuffer (LSB-first, 直接写显存, 支持多字节行宽) */
+static void setCanvasPixelDirect(int x, int y) {
+  if (x >= 0 && x < ASTRA_SCREEN_W && y >= 0 && y < ASTRA_SCREEN_H) {
+    canvasBuffer[x + (y / 8) * ASTRA_SCREEN_W] |= (1 << (y % 8));
+  }
+}
+
 static void drawIcon(int x, int y, const StatusIcon *icon) {
   int bytesPerRow = (icon->w + 7) / 8;
   for (int row = 0; row < icon->h; row++) {
@@ -136,10 +157,7 @@ static void drawIcon(int x, int y, const StatusIcon *icon) {
       int byteIdx = row * bytesPerRow + col / 8;
       int bitIdx  = col % 8;
       if (icon->data[byteIdx] & (1 << bitIdx)) {
-        int px = x + col, py = y + row;
-        if (px >= 0 && px < ASTRA_SCREEN_W && py >= 0 && py < ASTRA_SCREEN_H) {
-          canvasBuffer[px + (py / 8) * ASTRA_SCREEN_W] |= (1 << (py % 8));
-        }
+        setCanvasPixelDirect(x + col, y + row);
       }
     }
   }
@@ -152,6 +170,25 @@ static int drawStatusIconFromRight(int rightX, const StatusIcon *icon) {
   return x - ICON_GAP;
 }
 
+static int drawStatusIcons(void) {
+  int iconRight = ASTRA_SCREEN_W - ICON_GAP;
+  for (size_t i = 0; i < sizeof(STATUS_ICON_LAYOUT) / sizeof(STATUS_ICON_LAYOUT[0]); i++) {
+    iconRight = drawStatusIconFromRight(iconRight, STATUS_ICON_LAYOUT[i]);
+  }
+  return iconRight - ICON_GAP;
+}
+
+static void drawStatusChar(int x, int y, char c) {
+  if (c < ' ' || c > '~') c = ' ';
+  const unsigned char *glyph = font_8x16_data[c - ' '];
+  for (int row = 0; row < 16; row++) {
+    unsigned char b = glyph[row];
+    for (int col = 0; col < 8; col++) {
+      if (b & (0x80 >> col)) setCanvasPixelDirect(x + col, y + row);
+    }
+  }
+}
+
 /* 在 canvasBuffer 顶部绘制状态栏 (y=0~STATUS_BAR_H-1) */
 static void drawStatusBar() {
   /* 1. 清除状态栏区域 */
@@ -162,31 +199,18 @@ static void drawStatusBar() {
     for (int x = 0; x < ASTRA_SCREEN_W; x++) row[x] &= nb;
   }
 
-  /* 2. 画标题文字 (左侧, 8x16 字体, y=0~15) */
-  for (size_t i = 0; i < sizeof(statusBarTitle) && statusBarTitle[i]; i++) {
-    char c = statusBarTitle[i];
-    if (c < ' ' || c > '~') c = ' ';
-    const unsigned char *glyph = font_8x16_data[c - ' '];
-    for (int row = 0; row < 16; row++) {
-      unsigned char b = glyph[row];
-      for (int col = 0; col < 8; col++) {
-        if (b & (0x80 >> col)) {
-          int x = (int)(i * 8 + col);
-          int y = row;
-          if (x >= 0 && x < ASTRA_SCREEN_W && y >= 0 && y < STATUS_BAR_H) {
-            canvasBuffer[x + (y / 8) * ASTRA_SCREEN_W] |= (1 << (y % 8));
-          }
-        }
-      }
-    }
-  }
+  /* 2. 右侧静态图标: TF卡 | WiFi | 电池 */
+  int titleRightLimit = drawStatusIcons();
 
-  /* 3. 右侧静态图标: TF卡(14×10) | WiFi(14×10) | 电池(16×10) */
+  /* 3. 画标题文字 (左侧, 保持 8x16 原始大小并垂直居中) */
   {
-    int iconRight = ASTRA_SCREEN_W - ICON_GAP;
-    iconRight = drawStatusIconFromRight(iconRight, &STATUS_ICON_BATTERY);
-    iconRight = drawStatusIconFromRight(iconRight, &STATUS_ICON_WIFI);
-    drawStatusIconFromRight(iconRight, &STATUS_ICON_TF);
+    int x = 0;
+    int y = (STATUS_BAR_H - STATUS_TEXT_H) / 2;
+    for (size_t i = 0; i < sizeof(statusBarTitle) && statusBarTitle[i]; i++) {
+      if (x + STATUS_TEXT_W > titleRightLimit) break;
+      drawStatusChar(x, y, statusBarTitle[i]);
+      x += STATUS_TEXT_W;
+    }
   }
 
   /* 4. 画底部分隔线 (y=STATUS_BAR_H-1) */
@@ -205,13 +229,106 @@ static void drawCharDirect(int x, int y, char c) {
   for (int row = 0; row < 16; row++) {
     unsigned char b = glyph[row];
     for (int col = 0; col < 8; col++) {
-      if (b & (0x80 >> col)) {
-        int px = x + col, py = y + row;
-        if (px >= 0 && px < ASTRA_SCREEN_W && py >= 0 && py < ASTRA_SCREEN_H) {
-          canvasBuffer[px + (py / 8) * ASTRA_SCREEN_W] |= (1 << (py % 8));
-        }
-      }
+      if (b & (0x80 >> col)) setCanvasPixelDirect(x + col, y + row);
     }
+  }
+}
+
+#if defined(__CC_ARM)
+extern "C" unsigned int Image$$RW_IRAM1$$Base;
+extern "C" unsigned int Image$$ER_IROM1$$Length;
+extern "C" unsigned int Image$$RW_IRAM1$$Length;
+extern "C" unsigned int __initial_sp;
+#endif
+
+static void appendChar(char *buf, int *pos, char c) {
+  if (*pos < 16) buf[(*pos)++] = c;
+}
+
+static void appendText(char *buf, int *pos, const char *text) {
+  for (int i = 0; text[i]; i++) appendChar(buf, pos, text[i]);
+}
+
+static void appendUInt(char *buf, int *pos, uint32_t value) {
+  if (value >= 100U) appendChar(buf, pos, '0' + (value / 100U) % 10U);
+  if (value >= 10U) appendChar(buf, pos, '0' + (value / 10U) % 10U);
+  appendChar(buf, pos, '0' + value % 10U);
+}
+
+static uint32_t calcPercent(uint32_t usedBytes, uint32_t totalBytes) {
+  if (totalBytes == 0U) return 0U;
+  uint32_t percent = (usedBytes * 100U + totalBytes / 2U) / totalBytes;
+  return (percent > 100U) ? 100U : percent;
+}
+
+extern "C" void astraGetMemoryUsage(AstraMemoryUsage *usage) {
+  if (usage == nullptr) return;
+#if defined(__CC_ARM)
+  const uint32_t sramTotalBytes = 20U * 1024U;
+  const uint32_t flashTotalBytes = 64U * 1024U;
+  usage->ramBytes = (uint32_t)&__initial_sp - (uint32_t)&Image$$RW_IRAM1$$Base;
+  usage->romBytes = (uint32_t)&Image$$ER_IROM1$$Length + (uint32_t)&Image$$RW_IRAM1$$Length;
+#else
+  const uint32_t sramTotalBytes = 1U;
+  const uint32_t flashTotalBytes = 1U;
+  usage->ramBytes = 0;
+  usage->romBytes = 0;
+#endif
+  usage->ramPercent = calcPercent(usage->ramBytes, sramTotalBytes);
+  usage->romPercent = calcPercent(usage->romBytes, flashTotalBytes);
+}
+
+static void appendPercentMetric(char *buf, int *pos, const char *label, uint32_t percent) {
+  appendText(buf, pos, label);
+  appendUInt(buf, pos, percent);
+  appendChar(buf, pos, '%');
+}
+
+static void drawStringDirect(int x, int y, const char *text) {
+  for (int i = 0; text[i] && x + 8 <= ASTRA_SCREEN_W; i++) {
+    drawCharDirect(x, y, text[i]);
+    x += 8;
+  }
+}
+
+static void buildMemoryInfoText(char *buf) {
+  int pos = 0;
+  AstraMemoryUsage usage;
+  astraGetMemoryUsage(&usage);
+  appendPercentMetric(buf, &pos, "RAM:", usage.ramPercent);
+  appendChar(buf, &pos, ' ');
+  appendPercentMetric(buf, &pos, "ROM:", usage.romPercent);
+  buf[pos] = 0;
+}
+
+static void buildTimeText(char *buf) {
+  uint32_t seconds = HAL_GetTick() / 1000U;
+  uint32_t hours = (seconds / 3600U) % 100U;
+  uint32_t minutes = (seconds / 60U) % 60U;
+  seconds %= 60U;
+
+  buf[0] = '0' + hours / 10U;
+  buf[1] = '0' + hours % 10U;
+  buf[2] = ':';
+  buf[3] = '0' + minutes / 10U;
+  buf[4] = '0' + minutes % 10U;
+  buf[5] = ':';
+  buf[6] = '0' + seconds / 10U;
+  buf[7] = '0' + seconds % 10U;
+  buf[8] = 0;
+}
+
+static void buildFpsText(char *buf) {
+  buf[0] = 'F'; buf[1] = 'P'; buf[2] = 'S'; buf[3] = ':';
+  uint8_t fps = currentFps;
+  if (fps == 0) {
+    buf[4] = '0';
+    buf[5] = 0;
+  } else {
+    buf[5] = '0' + fps % 10;
+    fps /= 10;
+    buf[4] = (fps > 0) ? ('0' + fps) : ' ';
+    buf[6] = 0;
   }
 }
 
@@ -233,54 +350,23 @@ static void drawBottomStatusBar() {
     for (int x = 0; x < ASTRA_SCREEN_W; x++) row[x] |= bit;
   }
 
-  /* 3. 第一行文字 (y=UI_MAX_Y+1 ~ UI_MAX_Y+16, 即 129~144): 左侧版本, 右侧 FPS */
+  /* 3. 第一行文字: RAM/ROM 占用 */
   {
-    const char *ver = APP_VERSION;
-    int x = 0;
-    for (int i = 0; ver[i]; i++) { drawCharDirect(x, UI_MAX_Y + 1, ver[i]); x += 8; }
-
-    /* FPS 右对齐: "FPS:XX" 共 6 字符 = 48 像素 */
-    char fpsBuf[8];
-    fpsBuf[0] = 'F'; fpsBuf[1] = 'P'; fpsBuf[2] = 'S'; fpsBuf[3] = ':';
-    uint8_t fps = currentFps;  /* 用局部变量, 避免修改全局 */
-    if (fps == 0) { fpsBuf[4] = '0'; fpsBuf[5] = 0; }
-    else {
-      fpsBuf[5] = '0' + fps % 10; fps /= 10;
-      fpsBuf[4] = (fps > 0) ? ('0' + fps) : ' ';
-      fpsBuf[6] = 0;
-    }
-    int fpsLen = 0;
-    while (fpsBuf[fpsLen]) fpsLen++;
-    int fpsX = ASTRA_SCREEN_W - fpsLen * 8;
-    for (int i = 0; fpsBuf[i]; i++) { drawCharDirect(fpsX, UI_MAX_Y + 1, fpsBuf[i]); fpsX += 8; }
+    char memBuf[17];
+    buildMemoryInfoText(memBuf);
+    drawStringDirect(0, UI_MAX_Y + 1, memBuf);
   }
 
-  /* 4. 第二行文字 (y=UI_MAX_Y+17 ~ UI_MAX_Y+32, 即 145~160→裁剪到159): 运行时间 HH:MM:SS */
+  /* 4. 第二行文字: 左侧时间, 右侧 FPS */
   {
-    /* 计算时分秒: 总秒数 = HAL_GetTick()/1000 */
-    uint32_t secTotal = HAL_GetTick() / 1000;
-    uint32_t hours   = secTotal / 3600;
-    uint32_t minutes = (secTotal % 3600) / 60;
-    uint32_t seconds = secTotal % 60;
-
-    /* 格式: HH:MM:SS (8 字符 = 64px), 左对齐填满整行 */
-    char timeBuf[10];
-    timeBuf[0] = '0' + (hours / 10);
-    timeBuf[1] = '0' + (hours % 10);
-    timeBuf[2] = ':';
-    timeBuf[3] = '0' + (minutes / 10);
-    timeBuf[4] = '0' + (minutes % 10);
-    timeBuf[5] = ':';
-    timeBuf[6] = '0' + (seconds / 10);
-    timeBuf[7] = '0' + (seconds % 10);
-    timeBuf[8] = 0;
-
-    int x = 0;
-    for (int i = 0; timeBuf[i]; i++) {
-      if (x + 8 > ASTRA_SCREEN_W) break;
-      drawCharDirect(x, UI_MAX_Y + 17, timeBuf[i]);
-      x += 8;
-    }
+    char timeBuf[9];
+    char fpsBuf[8];
+    buildTimeText(timeBuf);
+    buildFpsText(fpsBuf);
+    int fpsLen = 0;
+    while (fpsBuf[fpsLen]) fpsLen++;
+    drawStringDirect(0, UI_MAX_Y + 17, timeBuf);
+    drawStringDirect(ASTRA_SCREEN_W - fpsLen * 8, UI_MAX_Y + 17, fpsBuf);
   }
 }
 
@@ -348,8 +434,8 @@ public:
   void _setDrawType(uint8_t _type) { drawType = _type; }
 
   void _drawPixel(float _x, float _y) {
-    int x = (int)_x, y = (int)_y + UI_OFFSET_Y;
-    if (x < 0 || x >= ASTRA_SCREEN_W || y < 0 || y >= UI_MAX_Y) return;
+    int x = (int)_x, y = (int)_y + getDrawOffsetY();
+    if (x < 0 || x >= ASTRA_SCREEN_W || y < 0 || y >= getDrawMaxY()) return;
     uint16_t idx = x + (y / 8) * ASTRA_SCREEN_W;
     uint8_t bit = 1 << (y % 8);
     if (drawType == 1) canvasBuffer[idx] |= bit;
@@ -359,8 +445,9 @@ public:
 
   /* 优化: 直接字节操作, 避免 float→int 和边界检查开销 */
   void _drawHLine(float _x, float _y, float _l) {
-    int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, l = (int)_l;
-    if (l <= 0 || y0 < 0 || y0 >= UI_MAX_Y) return;
+    int x0 = (int)_x, y0 = (int)_y + getDrawOffsetY(), l = (int)_l;
+    int maxY = getDrawMaxY();
+    if (l <= 0 || y0 < 0 || y0 >= maxY) return;
     int x1 = x0 + l - 1;
     if (x0 < 0) x0 = 0;
     if (x1 >= ASTRA_SCREEN_W) x1 = ASTRA_SCREEN_W - 1;
@@ -373,11 +460,12 @@ public:
   }
 
   void _drawVLine(float _x, float _y, float _h) {
-    int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, h = (int)_h;
+    int x0 = (int)_x, y0 = (int)_y + getDrawOffsetY(), h = (int)_h;
+    int maxY = getDrawMaxY();
     if (h <= 0 || x0 < 0 || x0 >= ASTRA_SCREEN_W) return;
     int y1 = y0 + h - 1;
     if (y0 < 0) y0 = 0;
-    if (y1 >= UI_MAX_Y) y1 = UI_MAX_Y - 1;
+    if (y1 >= maxY) y1 = maxY - 1;
     if (y0 > y1) return;
     int page = y0 / 8;
     int bitIdx = y0 % 8;
@@ -403,14 +491,15 @@ public:
   }
 
   void _drawBox(float _x, float _y, float _w, float _h) {
-    int x0 = (int)_x, y0 = (int)_y + UI_OFFSET_Y, w = (int)_w, h = (int)_h;
+    int x0 = (int)_x, y0 = (int)_y + getDrawOffsetY(), w = (int)_w, h = (int)_h;
+    int maxY = getDrawMaxY();
     if (w <= 0 || h <= 0) return;
     int x1 = x0 + w - 1;
     int y1 = y0 + h - 1;
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
     if (x1 >= ASTRA_SCREEN_W) x1 = ASTRA_SCREEN_W - 1;
-    if (y1 >= UI_MAX_Y) y1 = UI_MAX_Y - 1;
+    if (y1 >= maxY) y1 = maxY - 1;
     if (x0 > x1 || y0 > y1) return;
     uint8_t op = drawType;
     for (int y = y0; y <= y1; y++) {

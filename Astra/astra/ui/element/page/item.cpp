@@ -56,6 +56,21 @@ static void drawScaledBitmap(float dstX,
   }
 }
 
+static void drawTileChevron(float x, float centerY, bool right) {
+  const uint8_t arrowHalfHeight = 6;
+  const uint8_t arrowWidth = 7;
+
+  for (uint8_t i = 0; i <= arrowHalfHeight; i++) {
+    float px = right ? x + arrowWidth - 1 - i : x + i;
+    HAL::drawPixel(px, centerY - i);
+    HAL::drawPixel(px, centerY + i);
+    if (i > 0) {
+      HAL::drawPixel(px, centerY - i + 1);
+      HAL::drawPixel(px, centerY + i - 1);
+    }
+  }
+}
+
 void Item::updateConfig() {
   this->systemConfig = HAL::getSystemConfig();
   this->astraConfig = getUIConfig();
@@ -162,27 +177,14 @@ void Menu::render(std::vector<float> _camera) {
     positionForeground.wBarTrg = (selectIndex + 1) * ((float)systemConfig.screenWeight / getItemNum());
     HAL::drawBox(0, positionForeground.yBar, positionForeground.wBar, astraConfig.tileBarHeight);
 
-    //draw left arrow.
-    HAL::drawHLine(astraConfig.tileArrowMargin, positionForeground.yArrow, astraConfig.tileArrowWidth);
-    HAL::drawPixel(astraConfig.tileArrowMargin + 1, positionForeground.yArrow + 1);
-    HAL::drawPixel(astraConfig.tileArrowMargin + 2, positionForeground.yArrow + 2);
-    HAL::drawPixel(astraConfig.tileArrowMargin + 1, positionForeground.yArrow - 1);
-    HAL::drawPixel(astraConfig.tileArrowMargin + 2, positionForeground.yArrow - 2);
-
-    //draw right arrow.
-    HAL::drawHLine(systemConfig.screenWeight - astraConfig.tileArrowWidth - astraConfig.tileArrowMargin, positionForeground.yArrow, astraConfig.tileArrowWidth);
-    HAL::drawPixel(systemConfig.screenWeight - astraConfig.tileArrowWidth, positionForeground.yArrow + 1);
-    HAL::drawPixel(systemConfig.screenWeight - astraConfig.tileArrowWidth - 1, positionForeground.yArrow + 2);
-    HAL::drawPixel(systemConfig.screenWeight - astraConfig.tileArrowWidth, positionForeground.yArrow - 1);
-    HAL::drawPixel(systemConfig.screenWeight - astraConfig.tileArrowWidth - 1, positionForeground.yArrow - 2);
-
-    //draw left button.
-    HAL::drawHLine(astraConfig.tileBtnMargin, positionForeground.yArrow + 2, 9);
-    HAL::drawBox(astraConfig.tileBtnMargin + 2, positionForeground.yArrow + 2 - 4, 5, 4);
-
-    //draw right button.
-    HAL::drawHLine(systemConfig.screenWeight - astraConfig.tileBtnMargin - 9, positionForeground.yArrow + 2, 9);
-    HAL::drawBox(systemConfig.screenWeight - astraConfig.tileBtnMargin - 9 + 2, positionForeground.yArrow + 2 - 4, 5, 4);
+    //draw title-side chevrons.
+    {
+      const float arrowWidth = 7;
+      float leftArrowX = astraConfig.tileArrowMargin;
+      float rightArrowX = systemConfig.screenWeight - astraConfig.tileArrowMargin - arrowWidth;
+      drawTileChevron(leftArrowX, positionForeground.yArrow, false);
+      drawTileChevron(rightArrowX, positionForeground.yArrow, true);
+    }
 
     //draw dotted line.
     HAL::drawHDottedLine(0, positionForeground.yDottedLine, systemConfig.screenWeight);
@@ -280,7 +282,8 @@ bool Menu::addItem(Menu *_page) {
         _page->position.yTrg = astraConfig.tilePicTopMargin;
 
         positionForeground.yBarTrg = 0;
-        positionForeground.yArrowTrg = systemConfig.screenHeight - astraConfig.tileArrowBottomMargin;
+        positionForeground.yArrowTrg =
+            systemConfig.screenHeight - astraConfig.tileTextBottomMargin + astraConfig.tileTitleHeight / 2.0f;
         positionForeground.yDottedLineTrg = systemConfig.screenHeight - astraConfig.tileDottedLineBottomMargin;
       }
       return true;
