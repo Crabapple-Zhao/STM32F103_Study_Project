@@ -6,12 +6,12 @@
 //   - 新增 astraLoop() 非阻塞接口, 供 main 主循环调用
 //
 
-#include <vector>
 #include "astra_rocket.h"
 #include "astra_icons.h"
 #include "ui/launcher.h"
 #include "app_config.h"
 #include "app_log.h"
+#include "dht11.h"
 
 /* hal_port.cpp 中定义, 控制状态栏绘制 */
 extern bool bootScreenActive;
@@ -19,11 +19,8 @@ extern bool bootScreenActive;
 static astra::Launcher* astraLauncher = nullptr;
 static astra::Menu* rootPage = nullptr;
 static astra::Menu* toolPage = nullptr;
-
-static std::vector<uint8_t> pic_home;
-static std::vector<uint8_t> pic_gear;
-static std::vector<uint8_t> pic_info;
-static std::vector<uint8_t> pic_tool;
+static uint32_t dht11PageLastReadTick = 0;
+static uint8_t dht11PageHasAttemptedRead = 0;
 
 namespace astra {
 config &getUIConfig() {
@@ -32,38 +29,153 @@ config &getUIConfig() {
 }
 }
 
-static void drawCenteredText(const std::string &text, float baselineY) {
-  HAL::drawEnglish((128.0f - (float)(text.length() * 8)) / 2.0f, baselineY, text);
+static size_t asciiLength(const char *text) {
+  size_t len = 0;
+  while (text != nullptr && text[len]) len++;
+  return len;
 }
 
-static void loadMenuIcons(void) {
-  pic_home.assign(pic_home_data, pic_home_data + sizeof(pic_home_data));
-  pic_gear.assign(pic_gear_data, pic_gear_data + sizeof(pic_gear_data));
-  pic_info.assign(pic_info_data, pic_info_data + sizeof(pic_info_data));
-  pic_tool.assign(pic_tool_data, pic_tool_data + sizeof(pic_tool_data));
+static void drawCenteredText(const char *text, float baselineY) {
+  HAL::drawEnglish((128.0f - (float)(asciiLength(text) * 8)) / 2.0f, baselineY, text);
 }
 
-static astra::Menu* createTile(const char *title, const std::vector<uint8_t> &icon) {
-  return new astra::Menu(title, icon);
+static astra::Menu* createTile(const char *title, const uint8_t *icon, uint16_t iconSize) {
+  return new astra::Menu(title, icon, iconSize);
 }
 
 static void addLeaf(astra::Menu *page, const char *title) {
   page->addItem(new astra::Menu(title));
 }
 
+static void drawUInt(uint8_t x, uint8_t y, uint32_t value) {
+  char buf[11];
+  int len = 0;
+  if (value == 0) {
+    buf[len++] = '0';
+  } else {
+    char tmp[10];
+    int tmpLen = 0;
+    while (value > 0 && tmpLen < 10) {
+      tmp[tmpLen++] = (char)('0' + value % 10U);
+      value /= 10U;
+    }
+    while (tmpLen > 0) buf[len++] = tmp[--tmpLen];
+  }
+  buf[len] = 0;
+  HAL::drawEnglish(x, y, buf);
+}
+
+static const char *dht11PageStatusText(DHT11_Status status);
+
+static void appendLogText(char *buf, int *pos, const char *text) {
+  for (int i = 0; text[i]; i++) buf[(*pos)++] = text[i];
+}
+
+static void appendLogUInt(char *buf, int *pos, uint32_t value) {
+  if (value == 0) {
+    buf[(*pos)++] = '0';
+    return;
+  }
+
+  char tmp[10];
+  int len = 0;
+  while (value > 0 && len < 10) {
+    tmp[len++] = (char)('0' + value % 10U);
+    value /= 10U;
+  }
+  while (len > 0) buf[(*pos)++] = tmp[--len];
+}
+
+static void logDht11Reading(const DHT11_Reading *reading) {
+  char buf[128];
+  int p = 0;
+  appendLogText(buf, &p, "[INFO] [dht11] status=");
+  appendLogText(buf, &p, dht11PageStatusText(reading->status));
+  appendLogText(buf, &p, " raw=");
+  appendLogText(buf, &p, DHT11_StatusText(reading->status));
+  if (reading->status == DHT11_OK) {
+    appendLogText(buf, &p, " temp=");
+    appendLogUInt(buf, &p, reading->temperature);
+    appendLogText(buf, &p, " humi=");
+    appendLogUInt(buf, &p, reading->humidity);
+  }
+  appendLogText(buf, &p, "\r\n");
+  buf[p] = 0;
+  uart_puts(buf);
+}
+
+static const char *dht11PageStatusText(DHT11_Status status) {
+  switch (status) {
+    case DHT11_OK:
+      return "OK";
+    case DHT11_ERR_RESPONSE_HIGH:
+    case DHT11_ERR_RESPONSE_LOW:
+    case DHT11_ERR_RESPONSE_RELEASE:
+      return "No sensor";
+    case DHT11_ERR_CHECKSUM:
+      return "Data error";
+    case DHT11_ERR_BIT_LOW:
+    case DHT11_ERR_BIT_HIGH:
+    default:
+      return "Sensor error";
+  }
+}
+
+static void dht11PageEnter(void) {
+  dht11PageLastReadTick = 0;
+  dht11PageHasAttemptedRead = 0;
+  DHT11_Init();
+  APP_LOG_INFO("dht11", "page_enter init=1 pin=PA12");
+}
+
+static void dht11PageExit(void) {
+  DHT11_DeInit();
+  dht11PageLastReadTick = 0;
+  dht11PageHasAttemptedRead = 0;
+  APP_LOG_INFO("dht11", "page_exit released=1 pin=PA12");
+}
+
+static void drawDht11Page(void) {
+  uint32_t now = HAL_GetTick();
+  if (!dht11PageHasAttemptedRead || now - dht11PageLastReadTick >= 2000U) {
+    DHT11_Reading reading = DHT11_Read();
+    logDht11Reading(&reading);
+    dht11PageLastReadTick = now;
+    dht11PageHasAttemptedRead = 1;
+  }
+
+  DHT11_Reading reading;
+  uint8_t hasReading = DHT11_GetLastReading(&reading);
+
+  HAL::drawEnglish(28, 34, "Temp/Humi");
+  HAL::drawHLine(10, 42, 108);
+
+  if (!hasReading || reading.status != DHT11_OK) {
+    HAL::drawEnglish(18, 78, hasReading ? dht11PageStatusText(reading.status) : "No sensor");
+    return;
+  }
+
+  HAL::drawEnglish(18, 72, "Temp:");
+  drawUInt(66, 72, reading.temperature);
+  HAL::drawEnglish(90, 72, "C");
+
+  HAL::drawEnglish(18, 98, "Humi:");
+  drawUInt(66, 98, reading.humidity);
+  HAL::drawEnglish(90, 98, "%");
+}
+
 static void buildMenuTree(void) {
   if (rootPage != nullptr) return;
 
   rootPage = new astra::Menu("root");
-  if (pic_home.empty()) loadMenuIcons();
 
-  astra::Menu* homeTile = createTile("Home", pic_home);
-  astra::Menu* settingsTile = createTile("Settings", pic_gear);
-  astra::Menu* aboutTile = createTile("About", pic_info);
-  toolPage = createTile("Tools", pic_tool);
+  astra::Menu* homeTile = createTile("Home", pic_home_data, sizeof(pic_home_data));
+  astra::Menu* sensorsTile = createTile("Sensors", pic_sensor_data, sizeof(pic_sensor_data));
+  astra::Menu* aboutTile = createTile("About", pic_info_data, sizeof(pic_info_data));
+  toolPage = createTile("Settings", pic_tool_data, sizeof(pic_tool_data));
 
   rootPage->addItem(homeTile);
-  rootPage->addItem(settingsTile);
+  rootPage->addItem(sensorsTile);
   rootPage->addItem(aboutTile);
   rootPage->addItem(toolPage);
 
@@ -71,19 +183,17 @@ static void buildMenuTree(void) {
   addLeaf(homeTile, "-Uptime");
   addLeaf(homeTile, "-Memory");
 
-  addLeaf(settingsTile, "-Brightness");
-  addLeaf(settingsTile, "-Contrast");
-  addLeaf(settingsTile, "-Reset");
+  sensorsTile->addItem(new astra::Menu("-Temp/Humi", drawDht11Page, dht11PageEnter, dht11PageExit));
+  addLeaf(sensorsTile, "-Barometer");
+  addLeaf(sensorsTile, "-Light");
 
   addLeaf(aboutTile, "-Astra UI");
   addLeaf(aboutTile, "-STM32F103");
   addLeaf(aboutTile, "-ST7735S");
 
-  addLeaf(toolPage, "-Encoder");
-  addLeaf(toolPage, "-LCD Test");
-  addLeaf(toolPage, "-LED Blink");
-  addLeaf(toolPage, "-SPI DMA");
-  addLeaf(toolPage, "-Key Scan");
+  addLeaf(toolPage, "-Brightness");
+  addLeaf(toolPage, "-Contrast");
+  addLeaf(toolPage, "-Reset");
 }
 
 void astraShowBootScreen(void) {

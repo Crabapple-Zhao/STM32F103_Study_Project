@@ -17,6 +17,11 @@
 
 namespace astra {
 
+struct Vec2 {
+  float x;
+  float y;
+};
+
 class Item {
 protected:
   sys::config systemConfig;
@@ -100,6 +105,9 @@ inline void Animation::animation(float *_pos, float _posTrg, float _speed) {
 //todo 实现之前提到过的那个进场和退场动画的idea
 class Menu : public Item, public Animation {
 public:
+  typedef void (*ContentRenderer)();
+  typedef void (*ContentCallback)();
+
   //存储其在父页面中的位置
   //list中就是每一项对应的坐标 tile中就是每一个图片的坐标
   typedef struct Position {
@@ -127,6 +135,8 @@ public:
 
   std::string title;
   std::vector<uint8_t> pic;
+  const uint8_t *picData = nullptr;
+  uint16_t picSize = 0;
 
   typedef enum PageType {
     TILE = 0,
@@ -135,6 +145,9 @@ public:
 
   PageType selfType;
   PageType childType; //在add第一个元素的时候确定 之后不可更改 只能加入相同类型的元素
+  ContentRenderer contentRenderer = nullptr;
+  ContentCallback contentEnter = nullptr;
+  ContentCallback contentExit = nullptr;
 
 public:
   Menu *parent;
@@ -143,16 +156,20 @@ public:
 
   explicit Menu(std::string _title);
   Menu(std::string _title, std::vector<uint8_t> _pic);
+  Menu(std::string _title, const uint8_t *_picData, uint16_t _picSize);
+  Menu(std::string _title, ContentRenderer _contentRenderer);
+  Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback _contentEnter, ContentCallback _contentExit);
 
-  void init(std::vector<float> _camera); //每次打开页面都要调用一次
+  void init(Vec2 _camera); //每次打开页面都要调用一次
   void deInit(); //每次关闭页面都要调用一次
 
-  void render(std::vector<float> _camera);  //render all child item.
+  void render(Vec2 _camera);  //render all child item.
   bool isSettled() const;
   uint8_t getItemNum() const;
   Position getItemPosition(uint8_t _index) const;
   Menu* getNext() const;  //启动器调用该方法来获取下一个页面
   Menu* getPreview() const;
+  bool isContentPage() const { return contentRenderer != nullptr; }
 
   //selector是启动器中修改的
 
@@ -182,7 +199,7 @@ public:
   //这样就可以弄磁贴的文字出现动画了
   ////todo 在磁贴中 选择的时候 摄像机和selector都要移动 磁贴的selector是一个空心方框 + 底部的字体
 
-  std::vector<float> getPosition();
+  Vec2 getPosition() const;
 
   void go(uint8_t _index);
   bool isSettled() const;
@@ -190,7 +207,7 @@ public:
   bool inject(Menu* _menu); //inject menu instance to prepare for render.
   bool destroy(); //destroy menu instance.
 
-  void render(std::vector<float> _camera);
+  void render(Vec2 _camera);
 };
 
 //加入了摄像机 随着摄像机动而动
@@ -212,7 +229,7 @@ public:
   Camera(float _x, float _y); //build a camera instance with position.
 
   uint8_t outOfView(float _x, float _y);
-  std::vector<float> getPosition();
+  Vec2 getPosition() const;
 
   //在启动器中新建selector和camera 然后注入menu render
   //在启动器中执行下述方法即可实现视角移动
@@ -226,7 +243,7 @@ public:
   void goToNextPageItem();
   void goToPreviewPageItem();
   void goToListItemPage(uint8_t _index);
-  void goToListItemRolling(std::vector<float> _posSelector);
+  void goToListItemRolling(Vec2 _posSelector);
   void goToTileItem(uint8_t _index);
 
   bool isMoving();

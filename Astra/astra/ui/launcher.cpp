@@ -70,10 +70,12 @@ void Launcher::init(Menu *_rootPage) {
 bool Launcher::open() {
   //todo 打开和关闭都还没写完 应该还漏掉了一部分内容
 
+  if (currentPage->getItemNum() == 0) return false;
+
   //如果当前页面指向的当前item没有后继 那就返回false
   Menu *nextPage = currentPage->getNext();
   if (nextPage == nullptr) return false;
-  if (nextPage->getItemNum() == 0) return false;
+  if (nextPage->getItemNum() == 0 && !nextPage->isContentPage()) return false;
 
   currentPage->deInit();  //先析构（退场动画）再挪动指针
 
@@ -82,7 +84,7 @@ bool Launcher::open() {
   camera->goDirect(0, 0);
   currentPage->init(camera->getPosition());
 
-  selector->inject(currentPage);
+  if (!currentPage->isContentPage()) selector->inject(currentPage);
   //selector->go(currentPage->selectIndex);
 
   astraSetStatusBarTitle(currentPage->title.c_str());
@@ -145,8 +147,10 @@ void Launcher::update() {
   }
 
   currentPage->render(camera->getPosition());
-  selector->render(camera->getPosition());
-  camera->update(currentPage, selector);
+  if (!currentPage->isContentPage()) {
+    selector->render(camera->getPosition());
+    camera->update(currentPage, selector);
+  }
 
   HAL::canvasUpdate();
 

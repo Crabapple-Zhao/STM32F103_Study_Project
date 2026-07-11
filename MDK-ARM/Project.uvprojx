@@ -340,7 +340,7 @@
               <MiscControls>--cpp11</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\Astra\\hal;..\\Astra\\astra;..\\Astra\\astra\\config;..\\Astra\\astra\\ui;..\\Astra\\astra\\ui\\element\\page</IncludePath>
+              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Hardware\\DHT11;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\Astra\\hal;..\\Astra\\astra;..\\Astra\\astra\\config;..\\Astra\\astra\\ui;..\\Astra\\astra\\ui\\element\\page</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -513,6 +513,11 @@
               <FileName>encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\Encoder\encoder.c</FilePath>
+            </File>
+            <File>
+              <FileName>dht11.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\DHT11\dht11.c</FilePath>
             </File>
           </Files>
         </Group>

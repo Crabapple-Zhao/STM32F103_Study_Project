@@ -581,9 +581,10 @@ public:
 
   /* ---- 文字绘制 ---- */
   /* _y 是左下角坐标, 转为左上角: yTop = _y - fontHeight */
-  void _drawEnglish(float _x, float _y, const std::string &_text) {
+  void _drawEnglish(float _x, float _y, const char *_text) {
+    if (_text == nullptr) return;
     float yTop = _y - 16;
-    for (size_t i = 0; i < _text.length(); i++) {
+    for (size_t i = 0; _text[i]; i++) {
       char c = _text[i];
       if (c < ' ' || c > '~') c = ' ';
       const unsigned char *glyph = font_8x16_data[c - ' '];
@@ -594,6 +595,10 @@ public:
         }
       }
     }
+  }
+
+  void _drawEnglish(float _x, float _y, const std::string &_text) {
+    _drawEnglish(_x, _y, _text.c_str());
   }
 
   /* 无中文字库, 转发到英文绘制 (ASCII 部分正常, 非ASCII显示为空格) */

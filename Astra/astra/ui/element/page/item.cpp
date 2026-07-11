@@ -88,11 +88,18 @@ Menu::Menu(std::string _title) {
   this->parent = nullptr;
   this->child.clear();
   this->pic.clear();
+  this->picData = nullptr;
+  this->picSize = 0;
+  this->contentRenderer = nullptr;
+  this->contentEnter = nullptr;
+  this->contentExit = nullptr;
 }
 
 Menu::Menu(std::string _title, std::vector<uint8_t> _pic) {
   this->title = _title;
   this->pic = _pic;
+  this->picData = this->pic.empty() ? nullptr : &this->pic[0];
+  this->picSize = (uint16_t)this->pic.size();
   this->selfType = TILE;
   this->childType = {};
   this->position.x = 0;
@@ -102,15 +109,80 @@ Menu::Menu(std::string _title, std::vector<uint8_t> _pic) {
   this->selectIndex = 0;
   this->parent = nullptr;
   this->child.clear();
+  this->contentRenderer = nullptr;
+  this->contentEnter = nullptr;
+  this->contentExit = nullptr;
 }
 
-void Menu::init(std::vector<float> _camera) {
+Menu::Menu(std::string _title, const uint8_t *_picData, uint16_t _picSize) {
+  this->title = _title;
+  this->pic.clear();
+  this->picData = _picData;
+  this->picSize = _picSize;
+  this->selfType = TILE;
+  this->childType = {};
+  this->position.x = 0;
+  this->position.y = 0;
+  this->position.xTrg = 0;
+  this->position.yTrg = astraConfig.tilePicTopMargin;
+  this->selectIndex = 0;
+  this->parent = nullptr;
+  this->child.clear();
+  this->contentRenderer = nullptr;
+  this->contentEnter = nullptr;
+  this->contentExit = nullptr;
+}
+
+Menu::Menu(std::string _title, ContentRenderer _contentRenderer) {
+  this->title = _title;
+  this->selfType = LIST;
+  this->childType = {};
+  this->position.x = astraConfig.listTextMargin;
+  this->position.y = 0;
+  this->position.xTrg = astraConfig.listTextMargin;
+  this->position.yTrg = 0;
+  this->selectIndex = 0;
+  this->parent = nullptr;
+  this->child.clear();
+  this->pic.clear();
+  this->picData = nullptr;
+  this->picSize = 0;
+  this->contentRenderer = _contentRenderer;
+  this->contentEnter = nullptr;
+  this->contentExit = nullptr;
+}
+
+Menu::Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback _contentEnter, ContentCallback _contentExit) {
+  this->title = _title;
+  this->selfType = LIST;
+  this->childType = {};
+  this->position.x = astraConfig.listTextMargin;
+  this->position.y = 0;
+  this->position.xTrg = astraConfig.listTextMargin;
+  this->position.yTrg = 0;
+  this->selectIndex = 0;
+  this->parent = nullptr;
+  this->child.clear();
+  this->pic.clear();
+  this->picData = nullptr;
+  this->picSize = 0;
+  this->contentRenderer = _contentRenderer;
+  this->contentEnter = _contentEnter;
+  this->contentExit = _contentExit;
+}
+
+void Menu::init(Vec2 _camera) {
   entryAnimation();
+
+  if (isContentPage()) {
+    if (contentEnter != nullptr) contentEnter();
+    return;
+  }
 
   if (childType == TILE) {
     //受展开开关影响的坐标初始化
     if (astraConfig.tileUnfold) {
-      for (auto _iter : child) _iter->position.x = _camera[0] - astraConfig.tilePicWidth; //unfold from left.
+      for (auto _iter : child) _iter->position.x = _camera.x - astraConfig.tilePicWidth; //unfold from left.
       positionForeground.wBar = 0;  //bar unfold from left.
 
     } else {
@@ -131,7 +203,7 @@ void Menu::init(std::vector<float> _camera) {
   } else if (childType == LIST) {
     //受展开开关影响的坐标初始化
     if (astraConfig.listUnfold) {
-      for (auto _iter : child) _iter->position.y = _camera[1] - astraConfig.listLineHeight; //text unfold from top.
+      for (auto _iter : child) _iter->position.y = _camera.y - astraConfig.listLineHeight; //text unfold from top.
       positionForeground.hBar = 0;  //bar unfold from top.
     } else {
       for (auto _iter : child) _iter->position.y = _iter->position.yTrg;
@@ -144,10 +216,18 @@ void Menu::init(std::vector<float> _camera) {
 }
 
 void Menu::deInit() {
+  if (isContentPage() && contentExit != nullptr) contentExit();
   //todo 未实现完全
 }
 
-void Menu::render(std::vector<float> _camera) {
+void Menu::render(Vec2 _camera) {
+  if (isContentPage()) {
+    Item::updateConfig();
+    HAL::setDrawType(1);
+    contentRenderer();
+    return;
+  }
+
   if (childType == TILE) {
     Item::updateConfig();
 
@@ -159,15 +239,15 @@ void Menu::render(std::vector<float> _camera) {
       bool selected = (i == selectIndex);
       float picW = selected ? astraConfig.tileSelectedPicWidth : astraConfig.tilePicWidth;
       float picH = selected ? astraConfig.tileSelectedPicHeight : astraConfig.tilePicHeight;
-      float picX = _iter->position.x - (picW - astraConfig.tilePicWidth) / 2.0f + _camera[0];
-      float picY = astraConfig.tilePicTopMargin - (picH - astraConfig.tilePicHeight) / 2.0f + _camera[1];
+      float picX = _iter->position.x - (picW - astraConfig.tilePicWidth) / 2.0f + _camera.x;
+      float picY = astraConfig.tilePicTopMargin - (picH - astraConfig.tilePicHeight) / 2.0f + _camera.y;
       drawScaledBitmap(picX,
                        picY,
                        (uint8_t)picW,
                        (uint8_t)picH,
                        (uint8_t)astraConfig.tilePicWidth,
                        (uint8_t)astraConfig.tilePicHeight,
-                       _iter->pic.empty() ? nullptr : &_iter->pic[0]);
+                       _iter->picData);
       //这里的xTrg在addItem的时候就已经确定了
       animation(&_iter->position.x, _iter->position.xTrg, astraConfig.tileAnimationSpeed);
     }
@@ -201,7 +281,7 @@ void Menu::render(std::vector<float> _camera) {
 
     //allow x > screen height, y > screen weight.
     for (auto _iter : child) {
-      HAL::drawChinese(_iter->position.x + _camera[0], _iter->position.y + astraConfig.listTextHeight + astraConfig.listTextMargin + _camera[1], _iter->title);
+      HAL::drawChinese(_iter->position.x + _camera.x, _iter->position.y + astraConfig.listTextHeight + astraConfig.listTextMargin + _camera.y, _iter->title);
       //这里的yTrg在addItem的时候就已经确定了
       animation(&_iter->position.y, _iter->position.yTrg, astraConfig.listAnimationSpeed);
     }
@@ -255,6 +335,7 @@ Menu::Position Menu::getItemPosition(uint8_t _index) const {
 }
 
 Menu *Menu::getNext() const {
+  if (child.empty()) return nullptr;
   return child[selectIndex];
 }
 
@@ -360,7 +441,7 @@ bool Selector::destroy() {
   return true;
 }
 
-void Selector::render(std::vector<float> _camera) {
+void Selector::render(Vec2 _camera) {
   Item::updateConfig();
 
   //实际上 这里已经实现过渡动画了
@@ -380,21 +461,21 @@ void Selector::render(std::vector<float> _camera) {
     //draw box.
     //大框需要受摄像机的影响
     HAL::setDrawType(2);
-    HAL::drawPixel(x + _camera[0], y + _camera[1]);
+    HAL::drawPixel(x + _camera.x, y + _camera.y);
     //左上角
-    HAL::drawHLine(x + _camera[0], y + _camera[1], astraConfig.tileSelectBoxLineLength + 1);
-    HAL::drawVLine(x + _camera[0], y + _camera[1], astraConfig.tileSelectBoxLineLength + 1);
+    HAL::drawHLine(x + _camera.x, y + _camera.y, astraConfig.tileSelectBoxLineLength + 1);
+    HAL::drawVLine(x + _camera.x, y + _camera.y, astraConfig.tileSelectBoxLineLength + 1);
     //左下角
-    HAL::drawHLine(x + _camera[0], y + _camera[1] + h - 1, astraConfig.tileSelectBoxLineLength + 1);
-    HAL::drawVLine(x + _camera[0], y + _camera[1] + h - astraConfig.tileSelectBoxLineLength - 1, astraConfig.tileSelectBoxLineLength);
+    HAL::drawHLine(x + _camera.x, y + _camera.y + h - 1, astraConfig.tileSelectBoxLineLength + 1);
+    HAL::drawVLine(x + _camera.x, y + _camera.y + h - astraConfig.tileSelectBoxLineLength - 1, astraConfig.tileSelectBoxLineLength);
     //右上角
-    HAL::drawHLine(x + _camera[0] + w - astraConfig.tileSelectBoxLineLength - 1, y + _camera[1], astraConfig.tileSelectBoxLineLength);
-    HAL::drawVLine(x + _camera[0] + w - 1, y + _camera[1], astraConfig.tileSelectBoxLineLength + 1);
+    HAL::drawHLine(x + _camera.x + w - astraConfig.tileSelectBoxLineLength - 1, y + _camera.y, astraConfig.tileSelectBoxLineLength);
+    HAL::drawVLine(x + _camera.x + w - 1, y + _camera.y, astraConfig.tileSelectBoxLineLength + 1);
     //右下角
-    HAL::drawHLine(x + _camera[0] + w - astraConfig.tileSelectBoxLineLength - 1, y + _camera[1] + h - 1, astraConfig.tileSelectBoxLineLength);
-    HAL::drawVLine(x + _camera[0] + w - 1, y + _camera[1] + h - astraConfig.tileSelectBoxLineLength - 1, astraConfig.tileSelectBoxLineLength);
+    HAL::drawHLine(x + _camera.x + w - astraConfig.tileSelectBoxLineLength - 1, y + _camera.y + h - 1, astraConfig.tileSelectBoxLineLength);
+    HAL::drawVLine(x + _camera.x + w - 1, y + _camera.y + h - astraConfig.tileSelectBoxLineLength - 1, astraConfig.tileSelectBoxLineLength);
 
-    HAL::drawPixel(x + _camera[0] + w - 1, y + _camera[1] + h - 1);
+    HAL::drawPixel(x + _camera.x + w - 1, y + _camera.y + h - 1);
   } else if (menu->childType == Menu::LIST) {
     if (!menu->isSettled()) {
       x = menu->child[menu->selectIndex]->position.x - astraConfig.selectorMargin;
@@ -406,17 +487,14 @@ void Selector::render(std::vector<float> _camera) {
     //draw select box.
     //受摄像机的影响
     HAL::setDrawType(2);
-    HAL::drawRBox(x + _camera[0], y + _camera[1], w, h - 1, astraConfig.selectorRadius);
+    HAL::drawRBox(x + _camera.x, y + _camera.y, w, h - 1, astraConfig.selectorRadius);
     //HAL::drawRBox(x, y, w, astraConfig.listLineHeight, astraConfig.selectorRadius);
     HAL::setDrawType(1);
   }
 }
 
-std::vector<float> Selector::getPosition() {
-  std::vector<float> result;
-  result.push_back(xTrg);
-  result.push_back(yTrg);
-  return result;
+Vec2 Selector::getPosition() const {
+  return {xTrg, yTrg};
 }
 
 Camera::Camera() {
@@ -451,11 +529,8 @@ uint8_t Camera::outOfView(float _x, float _y) {
   return 0;
 }
 
-std::vector<float> Camera::getPosition() {
-  std::vector<float> result;
-  result.push_back(x);
-  result.push_back(y);
-  return result;
+Vec2 Camera::getPosition() const {
+  return {x, y};
 }
 
 /**
@@ -516,7 +591,7 @@ void Camera::goToListItemPage(uint8_t _index) {
   if (this->y == _page * systemConfig.screenHeight) moving = false;
 }
 
-void Camera::goToListItemRolling(std::vector<float> _posSelector) {
+void Camera::goToListItemRolling(Vec2 _posSelector) {
 
   //这是一个让页面在一定情况下向下或向上滚动一行的函数
   //当index向上超越了一个屏幕可以显示的内容 就要向上滚动一行 滚动到以当前选择项为第一项的页面
@@ -531,14 +606,14 @@ void Camera::goToListItemRolling(std::vector<float> _posSelector) {
   //最开始左端点是0 右端点是max-1
   //index超过右端点 就向下滚动index-右端点行 同时左右端点都加上index-右端点
 
-  uint8_t direction = outOfView(_posSelector[0], _posSelector[1]); //0: no roll, 1: up, 2: down
+  uint8_t direction = outOfView(_posSelector.x, _posSelector.y); //0: no roll, 1: up, 2: down
 
   moving = true;
 
   if (direction == 1) {
-    go(_posSelector[0], _posSelector[1]);
+    go(_posSelector.x, _posSelector.y);
   } else if (direction == 2) {
-    go(_posSelector[0], _posSelector[1] + astraConfig.listLineHeight - systemConfig.screenHeight);
+    go(_posSelector.x, _posSelector.y + astraConfig.listLineHeight - systemConfig.screenHeight);
   } else {
     moving = false;
   }

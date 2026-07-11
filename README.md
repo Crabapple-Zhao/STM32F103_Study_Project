@@ -15,6 +15,7 @@
 | LED | PA11 心跳灯 (低电平点亮) |
 | 按键 | KEY1=PA0, KEY2=PC13 (高电平按下) |
 | 编码器 | A=PB6, B=PB7, SW=PB5 (TIM4 编码器模式) |
+| 传感器 | DHT11 DATA=PA12 (温湿度传感器，进入页面时访问) |
 
 ## 引脚
 
@@ -30,6 +31,7 @@
 | PA9 | USART1 TX |
 | PA10 | USART1 RX |
 | PA11 | LED (心跳灯，低电平点亮) |
+| PA12 | DHT11 DATA (温湿度传感器单总线) |
 | PC13 | KEY2 (按键，下拉输入) |
 | PB5 | ENC SW (编码器按键，上拉输入，低电平按下) |
 | PB6 | ENC A (TIM4_CH1，编码器 A 相) |
@@ -51,7 +53,8 @@ Dev-beta-STM32F103/
 │   ├── LCD/lcd.c+h           # ST7735S 128x160 (SPI+DMA)
 │   ├── LED/led.c+h           # PA11 心跳灯
 │   ├── KEY/key.c+h           # KEY1(PA0) + KEY2(PC13) 按键驱动
-│   └── Encoder/encoder.c+h   # 编码器旋钮驱动 (A/B/SW)
+│   ├── Encoder/encoder.c+h   # 编码器旋钮驱动 (A/B/SW)
+│   └── DHT11/dht11.c+h       # PA12 温湿度传感器单总线驱动
 ├── Astra/                     # Astra UI 框架
 │   ├── hal/                  # HAL 抽象层
 │   │   ├── hal.h/cpp         # HAL 基类 + 默认实现
@@ -93,7 +96,7 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code 30796B, RO-data 4352B, RW-data 268B, ZI-data 17900B (Keil ARMCC V5.06, MicroLib)
+**编译资源占用**: Code 31312B, RO-data 4708B, RW-data 212B, ZI-data 17484B (Keil ARMCC V5.06, MicroLib, v0.4.0)
 
 ## 架构说明
 
@@ -116,4 +119,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.3.9** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.0** | 详见 [CHANGELOG.md](CHANGELOG.md)

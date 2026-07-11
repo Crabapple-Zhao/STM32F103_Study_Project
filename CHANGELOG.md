@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-11
+
+### Added
+- 新增 `Hardware/DHT11/dht11.c/.h`，封装 PA12 单总线 DHT11 温湿度传感器驱动，包含 GPIO 输入/输出切换、40bit 数据读取、校验和检查和状态码输出。
+- 新增主页 `Sensors` 磁贴与传感器二级菜单，当前包含 `Temp/Humi`、`Barometer`、`Light` 三个入口。
+- 新增温湿度三级页面，进入后显示 DHT11 温湿度数据；未接入或响应超时时显示 `No sensor`。
+- 内容页面新增 enter/exit 生命周期回调，温湿度页面进入时初始化 PA12，退出时释放 PA12，避免未进入页面时持续访问传感器。
+
+### Changed
+- 菜单图标从复制到 `std::vector` 改为直接引用 Flash 中的静态图标数据，降低运行期 RAM 占用。
+- 主页第二个图标改为传感器图标，第四个标题改为 `Settings` 并保留原始工具图标。
+- DHT11 串口日志主状态与屏幕显示统一，例如 `status=No sensor raw=response_high_timeout`，保留 `raw` 字段用于底层问题定位。
+
+### Fixed
+- 修复点击温湿度页面后因内容页导航/选择器逻辑不匹配导致的卡死问题。
+- 修复传感器未接入、协议错误、校验错误显示不清晰的问题，屏幕与串口主状态保持一致。
+
+---
+
 ## [0.3.9] - 2026-07-10
 
 ### Changed
