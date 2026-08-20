@@ -54,7 +54,8 @@ Dev-beta-STM32F103/
 │   ├── LED/led.c+h           # PA11 心跳灯
 │   ├── KEY/key.c+h           # KEY1(PA0) + KEY2(PC13) 按键驱动
 │   ├── Encoder/encoder.c+h   # 编码器旋钮驱动 (A/B/SW)
-│   └── DHT11/dht11.c+h       # PA12 温湿度传感器单总线驱动
+│   ├── DHT11/dht11.c+h       # PA12 温湿度传感器单总线驱动
+│   └── Watchdog/watchdog.c+h # 独立看门狗与复位原因诊断
 ├── Astra/                     # Astra UI 框架
 │   ├── hal/                  # HAL 抽象层
 │   │   ├── hal.h/cpp         # HAL 基类 + 默认实现
@@ -96,7 +97,7 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code 31312B, RO-data 4708B, RW-data 212B, ZI-data 17484B (Keil ARMCC V5.06, MicroLib, v0.4.0)
+**编译资源占用**: Code 30796B, RO-data 4352B, RW-data 268B, ZI-data 17900B (Keil ARMCC V5.06, MicroLib, v0.4.1)
 
 ## 架构说明
 
@@ -111,6 +112,7 @@ main.cpp (C++)
   canvasUpdate 时逐行转换为 RGB565 并通过 SPI+DMA 推送到 LCD
 - **HAL 抽象层** (`hal.h/cpp`) 定义绘图 API，`hal_port.cpp` 提供具体实现
 - **项目级配置** (`app_config.h`) 统一固件版本、目标硬件、显示屏名称和 USART 调试参数，避免多处字符串不一致
+- **独立看门狗** (`watchdog.c`) 标称超时约 4 秒，主循环完成一轮 Astra UI 更新后刷新；启动日志记录复位原因
 - **菜单系统** 支持磁贴页 (TILE) 和列表页 (LIST) 两种风格，摄像机系统实现页面切换动画
 - **编码器输入** 旋转=上下导航，SW 短按=进入/确认，SW 长按=返回上一级
 - **中断处理函数** (`SysTick_Handler` / `DMA1_Channel3_IRQHandler`) 定义在 `bsp_init.c` 中，
@@ -119,4 +121,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.4.0** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.1** | 详见 [CHANGELOG.md](CHANGELOG.md)

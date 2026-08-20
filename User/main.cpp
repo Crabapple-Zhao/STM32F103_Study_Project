@@ -7,6 +7,7 @@
 #include "app_log.h"
 #include "hal_port.h"
 #include "astra_rocket.h"
+#include "watchdog.h"
 
 #if defined(__CC_ARM)
 extern "C" unsigned int __heap_base;
@@ -109,13 +110,27 @@ static void logHeapUsage(const char *stage)
 
 int main(void)
 {
+    WatchdogResetCause resetCause = Watchdog_CaptureResetCause();
     BSP_Init();
+    bool watchdogReady = Watchdog_Init();
     heapProbeInit();
     uart_puts("\r\n[INFO] [boot] firmware=" APP_NAME
               " version=" APP_VERSION
               " ui=" APP_UI_NAME
               " target=" APP_TARGET_NAME
               " lcd=" APP_LCD_NAME "\r\n");
+    uart_puts(watchdogReady ? "[INFO] [watchdog] enabled=true timeout_ms_nominal="
+                            : "[ERROR] [watchdog] enabled=false timeout_ms_nominal=");
+    {
+        char timeoutText[12];
+        int p = 0;
+        appendUInt(timeoutText, &p, Watchdog_GetNominalTimeoutMs());
+        timeoutText[p] = 0;
+        uart_puts(timeoutText);
+    }
+    uart_puts(" reset_cause=");
+    uart_puts(Watchdog_ResetCauseText(resetCause));
+    uart_puts("\r\n");
     logMemoryUsage();
     logHeapUsage("before_astra");
     astraHalInit();
@@ -130,6 +145,7 @@ int main(void)
     while (1)
     {
         astraLoop();
+        if (watchdogReady) Watchdog_Refresh();
         frameCount++;
         uint32_t now = HAL_GetTick();
         /* LED 心跳: 500ms 翻转 */

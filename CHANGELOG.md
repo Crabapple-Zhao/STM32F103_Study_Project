@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-08-20
+
+### Added
+- 新增 `Hardware/Watchdog/watchdog.c/.h`，使用 STM32F103 独立看门狗监测主循环，标称超时时间约 4 秒。
+- 启动日志新增看门狗启用状态、标称超时时间和复位原因，能够区分独立看门狗、软件、上电、引脚等复位来源。
+
+### Changed
+- 主循环仅在 `astraLoop()` 正常返回后刷新独立看门狗；UI 更新卡死、死循环或 HardFault 持续不返回时自动复位。
+
+### Verified
+- Keil ARMCC V5.06 编译通过，0 Error(s)、0 Warning(s)。
+- 受控停止刷新看门狗后，设备自动重启且串口打印 `reset_cause=watchdog`；恢复正常刷新后持续运行无误复位。
+
+---
+
 ## [0.4.0] - 2026-07-11
 
 ### Added
