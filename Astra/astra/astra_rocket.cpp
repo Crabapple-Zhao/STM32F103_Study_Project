@@ -12,6 +12,8 @@
 #include "app_config.h"
 #include "app_log.h"
 #include "bmp280.h"
+#include "cs100a.h"
+#include "cs100a_stm32f103.h"
 #include "dht11.h"
 #include "i2c.h"
 
@@ -29,6 +31,12 @@ static BMP280_Status bmp280PageInitStatus = BMP280_ERR_NOT_INITIALIZED;
 static uint32_t bmp280PageLastReadTick = 0;
 static uint8_t bmp280PageHasAttemptedRead = 0;
 static uint8_t bmp280PageBusInitialized = 0;
+static CS100A_Device cs100aDevice;
+static CS100A_Reading cs100aPageReading = {0U, 0U, CS100A_BUSY};
+static CS100A_Status cs100aPageInitStatus = CS100A_ERR_NOT_INITIALIZED;
+static uint32_t cs100aPageLastReadTick = 0U;
+static uint8_t cs100aPageMeasuring = 0U;
+static uint8_t cs100aPageHasReading = 0U;
 
 namespace astra {
 config &getUIConfig() {
@@ -368,6 +376,114 @@ static void drawBmp280Page(void) {
                           " C", 102);
 }
 
+static void logCs100aReading(const CS100A_Reading *reading) {
+  char buf[128];
+  int p = 0;
+  appendLogText(buf, &p, "[INFO] [cs100a] status=");
+  appendLogText(buf, &p, CS100A_StatusText(reading->status));
+  if (reading->pulse_us != 0U) {
+    appendLogText(buf, &p, " pulse_us=");
+    appendLogUInt(buf, &p, reading->pulse_us);
+  }
+  if (reading->status == CS100A_OK) {
+    appendLogText(buf, &p, " distance_mm=");
+    appendLogUInt(buf, &p, reading->distance_mm);
+  }
+  appendLogText(buf, &p, "\r\n");
+  buf[p] = 0;
+  uart_puts(buf);
+}
+
+static void cs100aPageStartMeasurement(void) {
+  CS100A_Status status = CS100A_Start(&cs100aDevice);
+  if (status == CS100A_BUSY) {
+    cs100aPageMeasuring = 1U;
+  } else {
+    cs100aPageReading.status = status;
+    cs100aPageHasReading = 1U;
+    cs100aPageMeasuring = 0U;
+    logCs100aReading(&cs100aPageReading);
+  }
+}
+
+static void cs100aPageEnter(void) {
+  char buf[128];
+  int p = 0;
+  cs100aPageLastReadTick = HAL_GetTick();
+  cs100aPageMeasuring = 0U;
+  cs100aPageHasReading = 0U;
+  cs100aPageReading.status = CS100A_BUSY;
+  cs100aPageInitStatus = CS100A_Init(&cs100aDevice,
+                                     CS100A_STM32F103_GetPort());
+
+  appendLogText(buf, &p, "[INFO] [cs100a] page_enter status=");
+  appendLogText(buf, &p, CS100A_StatusText(cs100aPageInitStatus));
+  appendLogText(buf, &p, " trig=PA15 echo=PB3 timer=TIM2_CH2\r\n");
+  buf[p] = 0;
+  uart_puts(buf);
+
+  if (cs100aPageInitStatus == CS100A_OK) cs100aPageStartMeasurement();
+}
+
+static void cs100aPageExit(void) {
+  CS100A_DeInit(&cs100aDevice);
+  cs100aPageInitStatus = CS100A_ERR_NOT_INITIALIZED;
+  cs100aPageReading.status = CS100A_BUSY;
+  cs100aPageLastReadTick = 0U;
+  cs100aPageMeasuring = 0U;
+  cs100aPageHasReading = 0U;
+  APP_LOG_INFO("cs100a", "page_exit released=1 timer=TIM2");
+}
+
+static void drawCs100aPage(void) {
+  uint32_t now = HAL_GetTick();
+  HAL::drawEnglish(32, 34, "Distance");
+  HAL::drawHLine(10, 42, 108);
+
+  if (cs100aPageInitStatus != CS100A_OK) {
+    drawCenteredText("Sensor error", 78);
+    return;
+  }
+
+  if (cs100aPageMeasuring != 0U) {
+    CS100A_Reading reading = CS100A_Poll(&cs100aDevice);
+    if (reading.status != CS100A_BUSY) {
+      cs100aPageReading = reading;
+      cs100aPageHasReading = 1U;
+      cs100aPageMeasuring = 0U;
+      cs100aPageLastReadTick = now;
+      logCs100aReading(&cs100aPageReading);
+    }
+  } else if (now - cs100aPageLastReadTick >= 500U) {
+    cs100aPageLastReadTick = now;
+    cs100aPageStartMeasurement();
+  }
+
+  if (cs100aPageHasReading == 0U) {
+    drawCenteredText("Measuring", 78);
+    return;
+  }
+  if (cs100aPageReading.status == CS100A_ERR_NO_ECHO) {
+    drawCenteredText("No Echo", 78);
+    return;
+  }
+  if (cs100aPageReading.status != CS100A_OK) {
+    drawCenteredText("Data error", 78);
+    return;
+  }
+
+  drawMeasurementCentered("", (int32_t)(cs100aPageReading.distance_mm * 10U),
+                          " cm", 78);
+
+  char pulseText[24];
+  int p = 0;
+  appendLogText(pulseText, &p, "Echo ");
+  appendLogUInt(pulseText, &p, cs100aPageReading.pulse_us);
+  appendLogText(pulseText, &p, " us");
+  pulseText[p] = 0;
+  drawCenteredText(pulseText, 102);
+}
+
 static void buildMenuTree(void) {
   if (rootPage != nullptr) return;
 
@@ -390,7 +506,8 @@ static void buildMenuTree(void) {
   sensorsTile->addItem(new astra::Menu("-Temp/Humi", drawDht11Page, dht11PageEnter, dht11PageExit));
   sensorsTile->addItem(new astra::Menu("-Barometer", drawBmp280Page,
                                       bmp280PageEnter, bmp280PageExit));
-  addLeaf(sensorsTile, "-Light");
+  sensorsTile->addItem(new astra::Menu("-Distance", drawCs100aPage,
+                                      cs100aPageEnter, cs100aPageExit));
 
   addLeaf(aboutTile, "-Astra UI");
   addLeaf(aboutTile, "-STM32F103");

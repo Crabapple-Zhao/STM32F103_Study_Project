@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-08-21
+
+### Added
+- 新增平台无关的 `Hardware/CS100A/cs100a.c/.h`，通过端口回调完成异步测量状态管理、无回波判定和距离换算。
+- 新增 `Hardware/CS100A/cs100a_stm32f103.c/.h`，使用 PA15 输出 TRIG、PB3/TIM2_CH2 输入捕获 ECHO，并在退出页面时释放 GPIO、TIM2 和中断资源。
+- 新增 `Sensors > Distance` 三级页面，显示实时距离和 ECHO 脉宽，并输出初始化、读数和资源释放串口日志。
+
+### Changed
+- 将传感器菜单第三项由 `Light` 改为 `Distance`；CS100A 仅在进入测距页面时初始化，退出页面后停止测量并释放资源。
+- 测距过程采用非阻塞 `Start/Poll` 接口，每 500ms 发起一次测量；无有效回波时显示 `No Echo`，端口异常时显示 `Data error`。
+
+### Verified
+- Keil ARMCC V5.06 全量编译通过，0 Error(s)、0 Warning(s)；资源占用为 Code 39708B、RO-data 4780B、RW-data 268B、ZI-data 17636B。
+- STM32CubeProgrammer SWD 下载和校验成功；COM4 硬复位日志确认 `version=v0.4.3`、看门狗、RAM/ROM、Astra 初始化步骤和 FPS 输出正常。
+- 实机测距串口持续输出有效 `pulse_us` 与 `distance_mm`，主循环保持运行且未触发看门狗复位。
+
+---
+
 ## [0.4.2] - 2026-08-21
 
 ### Added

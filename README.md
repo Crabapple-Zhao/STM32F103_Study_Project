@@ -10,12 +10,12 @@
 | 库 | STM32CubeF1 HAL v1.8.6 (ARMCC V5.06) |
 | 显示屏 | 1.8寸 TFT, ST7735S, 128x160, RGB565, SPI+DMA |
 | GUI | Astra UI 轻量级菜单框架 (1bpp 虚拟显存 ~2.5KB RAM) |
-| 接口 | 硬件 SPI1 (18MHz) + DMA1_Ch3, USART1 (115200bps) |
-| 调试 | SWD (ST-LINK), USB-UART (COM9) |
+| 接口 | 硬件 SPI1 (18MHz) + DMA1_Ch3, I2C2 (100kHz), USART1 (115200bps) |
+| 调试 | SWD (ST-LINK), USB-UART (COM4) |
 | LED | PA11 心跳灯 (低电平点亮) |
 | 按键 | KEY1=PA0, KEY2=PC13 (高电平按下) |
 | 编码器 | A=PB6, B=PB7, SW=PB5 (TIM4 编码器模式) |
-| 传感器 | DHT11 DATA=PA12 (温湿度传感器，进入页面时访问) |
+| 传感器 | DHT11 DATA=PA12；BMP280 I2C2=PB10/PB11；CS100A TRIG=PA15、ECHO=PB3（均在对应页面内访问） |
 
 ## 引脚
 
@@ -32,10 +32,14 @@
 | PA10 | USART1 RX |
 | PA11 | LED (心跳灯，低电平点亮) |
 | PA12 | DHT11 DATA (温湿度传感器单总线) |
+| PA15 | CS100A TRIG (超声波触发输出) |
+| PB3 | CS100A ECHO (TIM2_CH2 输入捕获) |
 | PC13 | KEY2 (按键，下拉输入) |
 | PB5 | ENC SW (编码器按键，上拉输入，低电平按下) |
 | PB6 | ENC A (TIM4_CH1，编码器 A 相) |
 | PB7 | ENC B (TIM4_CH2，编码器 B 相) |
+| PB10 | I2C2 SCL (BMP280 时钟) |
+| PB11 | I2C2 SDA (BMP280 数据) |
 | PA13/P14 | SWDIO/SWCLK (调试) |
 
 ## 工程结构
@@ -48,13 +52,16 @@ Dev-beta-STM32F103/
 │   ├── USART/usart.c+h       # USART1 驱动
 │   ├── SPI/spi.c+h           # SPI1 寄存器级驱动 (18MHz)
 │   ├── DMA/dma.c+h           # DMA1_Ch3 寄存器级驱动 (SPI_Tx)
-│   └── Timer/timer.c+h       # TIM4 编码器模式驱动 (寄存器级)
+│   ├── Timer/timer.c+h       # TIM4 编码器模式驱动 (寄存器级)
+│   └── I2C/i2c.c+h           # I2C2 PB10/PB11 轮询驱动
 ├── Hardware/
 │   ├── LCD/lcd.c+h           # ST7735S 128x160 (SPI+DMA)
 │   ├── LED/led.c+h           # PA11 心跳灯
 │   ├── KEY/key.c+h           # KEY1(PA0) + KEY2(PC13) 按键驱动
 │   ├── Encoder/encoder.c+h   # 编码器旋钮驱动 (A/B/SW)
 │   ├── DHT11/dht11.c+h       # PA12 温湿度传感器单总线驱动
+│   ├── BMP280/bmp280.c+h     # 可移植 BMP280 温度/气压驱动
+│   ├── CS100A/               # 可移植超声波驱动 + STM32F103 端口层
 │   └── Watchdog/watchdog.c+h # 独立看门狗与复位原因诊断
 ├── Astra/                     # Astra UI 框架
 │   ├── hal/                  # HAL 抽象层
@@ -97,7 +104,7 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code 37696B, RO-data 4748B, RW-data 232B, ZI-data 17616B (Keil ARMCC V5.06, MicroLib, v0.4.2)
+**编译资源占用**: Code 39708B, RO-data 4780B, RW-data 268B, ZI-data 17636B (Keil ARMCC V5.06, MicroLib, v0.4.3)
 
 ## 架构说明
 
@@ -121,4 +128,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.4.2** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.3** | 详见 [CHANGELOG.md](CHANGELOG.md)
