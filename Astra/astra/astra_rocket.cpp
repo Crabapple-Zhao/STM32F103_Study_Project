@@ -11,7 +11,9 @@
 #include "ui/launcher.h"
 #include "app_config.h"
 #include "app_log.h"
+#include "bmp280.h"
 #include "dht11.h"
+#include "i2c.h"
 
 /* hal_port.cpp 中定义, 控制状态栏绘制 */
 extern bool bootScreenActive;
@@ -21,6 +23,12 @@ static astra::Menu* rootPage = nullptr;
 static astra::Menu* toolPage = nullptr;
 static uint32_t dht11PageLastReadTick = 0;
 static uint8_t dht11PageHasAttemptedRead = 0;
+static BMP280_Device bmp280Device;
+static BMP280_Reading bmp280PageReading = {0, 0U, BMP280_ERR_NOT_INITIALIZED};
+static BMP280_Status bmp280PageInitStatus = BMP280_ERR_NOT_INITIALIZED;
+static uint32_t bmp280PageLastReadTick = 0;
+static uint8_t bmp280PageHasAttemptedRead = 0;
+static uint8_t bmp280PageBusInitialized = 0;
 
 namespace astra {
 config &getUIConfig() {
@@ -86,6 +94,40 @@ static void appendLogUInt(char *buf, int *pos, uint32_t value) {
   while (len > 0) buf[(*pos)++] = tmp[--len];
 }
 
+static void appendFixed2(char *buf, int *pos, int32_t value) {
+  uint32_t magnitude;
+  if (value < 0) {
+    buf[(*pos)++] = '-';
+    magnitude = (uint32_t)(-(int64_t)value);
+  } else {
+    magnitude = (uint32_t)value;
+  }
+
+  appendLogUInt(buf, pos, magnitude / 100U);
+  buf[(*pos)++] = '.';
+  buf[(*pos)++] = (char)('0' + (magnitude / 10U) % 10U);
+  buf[(*pos)++] = (char)('0' + magnitude % 10U);
+}
+
+static void appendHexByte(char *buf, int *pos, uint8_t value) {
+  static const char hex[] = "0123456789ABCDEF";
+  buf[(*pos)++] = '0';
+  buf[(*pos)++] = 'x';
+  buf[(*pos)++] = hex[value >> 4];
+  buf[(*pos)++] = hex[value & 0x0FU];
+}
+
+static void drawMeasurementCentered(const char *prefix, int32_t value,
+                                    const char *suffix, uint8_t baselineY) {
+  char buf[32];
+  int p = 0;
+  appendLogText(buf, &p, prefix);
+  appendFixed2(buf, &p, value);
+  appendLogText(buf, &p, suffix);
+  buf[p] = 0;
+  drawCenteredText(buf, baselineY);
+}
+
 static void logDht11Reading(const DHT11_Reading *reading) {
   char buf[128];
   int p = 0;
@@ -111,7 +153,7 @@ static const char *dht11PageStatusText(DHT11_Status status) {
     case DHT11_ERR_RESPONSE_HIGH:
     case DHT11_ERR_RESPONSE_LOW:
     case DHT11_ERR_RESPONSE_RELEASE:
-      return "No sensor";
+      return "No Sensor";
     case DHT11_ERR_CHECKSUM:
       return "Data error";
     case DHT11_ERR_BIT_LOW:
@@ -151,7 +193,7 @@ static void drawDht11Page(void) {
   HAL::drawHLine(10, 42, 108);
 
   if (!hasReading || reading.status != DHT11_OK) {
-    HAL::drawEnglish(18, 78, hasReading ? dht11PageStatusText(reading.status) : "No sensor");
+    HAL::drawEnglish(18, 78, hasReading ? dht11PageStatusText(reading.status) : "No Sensor");
     return;
   }
 
@@ -162,6 +204,168 @@ static void drawDht11Page(void) {
   HAL::drawEnglish(18, 98, "Humi:");
   drawUInt(66, 98, reading.humidity);
   HAL::drawEnglish(90, 98, "%");
+}
+
+static bool bmp280BusIsReady(void *, uint8_t address7, uint32_t timeoutMs) {
+  return I2C2_BusIsReady(address7, timeoutMs);
+}
+
+static bool bmp280BusRead(void *, uint8_t address7, uint8_t reg,
+                          uint8_t *data, uint16_t size, uint32_t timeoutMs) {
+  return I2C2_BusMemRead(address7, reg, data, size, timeoutMs);
+}
+
+static bool bmp280BusWrite(void *, uint8_t address7, uint8_t reg,
+                           const uint8_t *data, uint16_t size,
+                           uint32_t timeoutMs) {
+  return I2C2_BusMemWrite(address7, reg, data, size, timeoutMs);
+}
+
+static void bmp280BusDelay(void *, uint32_t delayMs) {
+  HAL_Delay(delayMs);
+}
+
+static const char *bmp280PageStatusText(BMP280_Status status) {
+  switch (status) {
+    case BMP280_OK:
+      return "OK";
+    case BMP280_ERR_BUS:
+    case BMP280_ERR_NO_SENSOR:
+    case BMP280_ERR_NOT_INITIALIZED:
+      return "No Sensor";
+    case BMP280_ERR_DATA:
+    case BMP280_ERR_COMPENSATION:
+    case BMP280_ERR_INVALID_ARGUMENT:
+    case BMP280_ERR_CHIP_ID:
+    case BMP280_ERR_CALIBRATION:
+    case BMP280_ERR_CONFIG:
+    default:
+      return "Data error";
+  }
+}
+
+static void logBmp280Connection(const char *event) {
+  char buf[160];
+  int p = 0;
+  appendLogText(buf, &p, "[INFO] [bmp280] ");
+  appendLogText(buf, &p, event);
+  appendLogText(buf, &p, " status=");
+  appendLogText(buf, &p, BMP280_StatusText(bmp280PageInitStatus));
+  appendLogText(buf, &p, " bus=I2C2 scl=PB10 sda=PB11");
+  if (bmp280PageInitStatus == BMP280_OK) {
+    appendLogText(buf, &p, " address=");
+    appendHexByte(buf, &p, BMP280_GetAddress(&bmp280Device));
+    appendLogText(buf, &p, " id=");
+    appendHexByte(buf, &p, BMP280_GetChipId(&bmp280Device));
+  }
+  appendLogText(buf, &p, "\r\n");
+  buf[p] = 0;
+  uart_puts(buf);
+}
+
+static void logBmp280Reading(const BMP280_Reading *reading) {
+  char buf[160];
+  int p = 0;
+  appendLogText(buf, &p, "[INFO] [bmp280] status=");
+  appendLogText(buf, &p, BMP280_StatusText(reading->status));
+  if (reading->status == BMP280_OK) {
+    appendLogText(buf, &p, " temp_c=");
+    appendFixed2(buf, &p, reading->temperature_centi_c);
+    appendLogText(buf, &p, " pressure_pa=");
+    appendLogUInt(buf, &p, reading->pressure_pa);
+    appendLogText(buf, &p, " pressure_hpa=");
+    appendFixed2(buf, &p, (int32_t)reading->pressure_pa);
+  }
+  appendLogText(buf, &p, "\r\n");
+  buf[p] = 0;
+  uart_puts(buf);
+}
+
+static const BMP280_Bus bmp280Bus = {
+  nullptr,
+  bmp280BusIsReady,
+  bmp280BusRead,
+  bmp280BusWrite,
+  bmp280BusDelay
+};
+
+static void bmp280PageRelease(void) {
+  if (bmp280PageBusInitialized != 0U) {
+    BMP280_DeInit(&bmp280Device);
+    I2C2_BusDeInit();
+  }
+  bmp280PageBusInitialized = 0;
+}
+
+static bool bmp280PageConnect(const char *event) {
+  bmp280PageRelease();
+  bmp280PageReading.status = BMP280_ERR_NOT_INITIALIZED;
+  bmp280PageHasAttemptedRead = 0;
+
+  bmp280PageBusInitialized = I2C2_BusInit() ? 1U : 0U;
+  if (bmp280PageBusInitialized == 0U) {
+    bmp280PageInitStatus = BMP280_ERR_BUS;
+  } else {
+    bmp280PageInitStatus = BMP280_Init(&bmp280Device, &bmp280Bus);
+    if (bmp280PageInitStatus != BMP280_OK) bmp280PageRelease();
+  }
+
+  logBmp280Connection(event);
+  return bmp280PageInitStatus == BMP280_OK;
+}
+
+static void bmp280PageEnter(void) {
+  bmp280PageLastReadTick = HAL_GetTick();
+  bmp280PageConnect("page_enter");
+}
+
+static void bmp280PageExit(void) {
+  bmp280PageRelease();
+  bmp280PageInitStatus = BMP280_ERR_NOT_INITIALIZED;
+  bmp280PageLastReadTick = 0;
+  bmp280PageHasAttemptedRead = 0;
+  bmp280PageReading.status = BMP280_ERR_NOT_INITIALIZED;
+  APP_LOG_INFO("bmp280", "page_exit released=1 bus=I2C2");
+}
+
+static void drawBmp280Page(void) {
+  HAL::drawEnglish(28, 34, "Barometer");
+  HAL::drawHLine(10, 42, 108);
+
+  uint32_t now = HAL_GetTick();
+  if (bmp280PageInitStatus != BMP280_OK) {
+    if (now - bmp280PageLastReadTick >= 2000U) {
+      bmp280PageLastReadTick = now;
+      bmp280PageConnect("reconnect");
+    }
+    if (bmp280PageInitStatus != BMP280_OK) {
+      drawCenteredText(bmp280PageStatusText(bmp280PageInitStatus), 78);
+      return;
+    }
+  }
+
+  if (!bmp280PageHasAttemptedRead ||
+      now - bmp280PageLastReadTick >= 2000U) {
+    bmp280PageReading = BMP280_Read(&bmp280Device);
+    logBmp280Reading(&bmp280PageReading);
+    bmp280PageLastReadTick = now;
+    bmp280PageHasAttemptedRead = 1;
+    if (bmp280PageReading.status != BMP280_OK) {
+      bmp280PageInitStatus = bmp280PageReading.status;
+      bmp280PageRelease();
+    }
+  }
+
+  if (bmp280PageReading.status != BMP280_OK) {
+    drawCenteredText(bmp280PageStatusText(bmp280PageReading.status), 78);
+    return;
+  }
+
+  drawCenteredText("Pressure", 60);
+  drawMeasurementCentered("", (int32_t)bmp280PageReading.pressure_pa,
+                          " hPa", 80);
+  drawMeasurementCentered("Temp ", bmp280PageReading.temperature_centi_c,
+                          " C", 102);
 }
 
 static void buildMenuTree(void) {
@@ -184,7 +388,8 @@ static void buildMenuTree(void) {
   addLeaf(homeTile, "-Memory");
 
   sensorsTile->addItem(new astra::Menu("-Temp/Humi", drawDht11Page, dht11PageEnter, dht11PageExit));
-  addLeaf(sensorsTile, "-Barometer");
+  sensorsTile->addItem(new astra::Menu("-Barometer", drawBmp280Page,
+                                      bmp280PageEnter, bmp280PageExit));
   addLeaf(sensorsTile, "-Light");
 
   addLeaf(aboutTile, "-Astra UI");

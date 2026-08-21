@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-08-21
+
+### Added
+- 新增独立 `Drivers/I2C/i2c.c/.h`，封装 I2C2 PB10/PB11 初始化、设备探测、寄存器读写和总线释放接口。
+- 新增可移植 `Hardware/BMP280/bmp280.c/.h`，通过调用方提供的总线回调完成地址探测、芯片 ID 检查、校准参数读取及温度、气压补偿。
+- 新增 `Sensor > Barometer` 三级页面，显示 BMP280 实时温度与气压，并输出地址、芯片 ID、读数和错误状态串口日志。
+
+### Changed
+- BMP280 仅在进入 Barometer 页面时初始化，退出页面后进入休眠并释放 I2C2；未进入页面时不访问传感器。
+- 温湿度和气压计页面的未连接提示统一为 `No Sensor`，有效通信但数据异常时显示 `Data error`。
+
+### Fixed
+- 气压计通信中途断线后释放错误状态下的 I2C2，并每 2 秒重新初始化总线和 BMP280；恢复接线后无需退出页面即可自动恢复数据。
+
+### Verified
+- Keil ARMCC V5.06 全量编译通过，0 Error(s)、0 Warning(s)；资源占用为 Code 37696B、RO-data 4748B、RW-data 232B、ZI-data 17616B。
+- 实机故障注入验证完成：正常读取后主动关闭 I2C2，串口依次输出 `status=bus_error`、`reconnect status=ok` 和恢复后的有效读数，未触发看门狗复位。
+- STM32CubeProgrammer SWD 下载及校验成功，COM4 启动日志、内存日志和 FPS 输出正常。
+
+---
+
 ## [0.4.1] - 2026-08-20
 
 ### Added
