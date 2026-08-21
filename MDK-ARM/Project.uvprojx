@@ -340,7 +340,7 @@
               <MiscControls>--cpp11</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Drivers\\I2C;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Hardware\\DHT11;..\\Hardware\\BMP280;..\\Hardware\\CS100A;..\\Hardware\\Watchdog;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\Astra\\hal;..\\Astra\\astra;..\\Astra\\astra\\config;..\\Astra\\astra\\ui;..\\Astra\\astra\\ui\\element\\page</IncludePath>
+              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Application\\Sensors;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Drivers\\I2C;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Hardware\\DHT11;..\\Hardware\\BMP280;..\\Hardware\\CS100A;..\\Hardware\\Watchdog;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\Astra\\hal;..\\Astra\\astra;..\\Astra\\astra\\pages;..\\Astra\\astra\\config;..\\Astra\\astra\\ui;..\\Astra\\astra\\ui\\element\\page</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -530,6 +530,11 @@
               <FilePath>..\Hardware\DHT11\dht11.c</FilePath>
             </File>
             <File>
+              <FileName>dht11_stm32f103.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\DHT11\dht11_stm32f103.c</FilePath>
+            </File>
+            <File>
               <FileName>watchdog.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\Watchdog\watchdog.c</FilePath>
@@ -548,6 +553,31 @@
               <FileName>cs100a_stm32f103.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\CS100A\cs100a_stm32f103.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application</GroupName>
+          <Files>
+            <File>
+              <FileName>sensor_runtime.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\Sensors\sensor_runtime.c</FilePath>
+            </File>
+            <File>
+              <FileName>dht11_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\Sensors\dht11_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>bmp280_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\Sensors\bmp280_sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>cs100a_sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\Sensors\cs100a_sensor.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -583,6 +613,11 @@
               <FileName>astra_rocket.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\Astra\astra\astra_rocket.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>sensor_pages.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\pages\sensor_pages.cpp</FilePath>
             </File>
             <File>
               <FileName>launcher.cpp</FileName>

@@ -13,6 +13,11 @@
 extern "C" {
 #endif
 
+bool I2C2_BusAcquire(void);
+void I2C2_BusRelease(void);
+uint8_t I2C2_BusGetUserCount(void);
+
+/* Compatibility aliases. Each successful Init must be paired with DeInit. */
 bool I2C2_BusInit(void);
 void I2C2_BusDeInit(void);
 bool I2C2_BusIsReady(uint8_t address7, uint32_t timeout_ms);

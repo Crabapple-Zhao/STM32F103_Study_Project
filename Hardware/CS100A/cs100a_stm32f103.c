@@ -8,6 +8,7 @@
 #define CS100A_TRIG_PIN             GPIO_ODR_ODR15
 #define CS100A_ECHO_TIMEOUT_US      40000U
 #define CS100A_TRIGGER_PULSE_US     15U
+#define CS100A_MAPR_FIELDS          (AFIO_MAPR_SWJ_CFG | AFIO_MAPR_TIM2_REMAP)
 
 typedef enum {
     CAPTURE_IDLE = 0,
@@ -22,7 +23,9 @@ static volatile uint16_t capture_rise = 0U;
 static volatile uint32_t capture_pulse_us = 0U;
 static uint32_t measurement_start_cycles = 0U;
 static uint32_t cycles_per_us = 0U;
+static uint32_t saved_mapr_fields = 0U;
 static uint8_t port_initialized = 0U;
+static uint8_t mapr_saved = 0U;
 
 static bool port_init(void *context)
 {
@@ -30,13 +33,19 @@ static bool port_init(void *context)
     (void)context;
     if (port_initialized != 0U) return true;
 
+    cycles_per_us = SystemCoreClock / 1000000U;
+    if (cycles_per_us == 0U) return false;
+    if ((RCC->APB1ENR & RCC_APB1ENR_TIM2EN) != 0U) return false;
+
     RCC->APB2ENR |= RCC_APB2ENR_AFIOEN | RCC_APB2ENR_IOPAEN |
                     RCC_APB2ENR_IOPBEN;
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
     /* Keep SWD enabled, release PA15/PB3 from JTAG, remap TIM2_CH2 to PB3. */
     mapr = AFIO->MAPR;
-    mapr &= ~(AFIO_MAPR_SWJ_CFG | AFIO_MAPR_TIM2_REMAP);
+    saved_mapr_fields = mapr & CS100A_MAPR_FIELDS;
+    mapr_saved = 1U;
+    mapr &= ~CS100A_MAPR_FIELDS;
     mapr |= AFIO_MAPR_SWJ_CFG_JTAGDISABLE |
             AFIO_MAPR_TIM2_REMAP_PARTIALREMAP1;
     AFIO->MAPR = mapr;
@@ -61,10 +70,7 @@ static bool port_init(void *context)
     TIM2->CR1 = TIM_CR1_CEN;
 
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    DWT->CYCCNT = 0U;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-    cycles_per_us = SystemCoreClock / 1000000U;
-    if (cycles_per_us == 0U) return false;
 
     NVIC_SetPriority(TIM2_IRQn, 2U);
     NVIC_ClearPendingIRQ(TIM2_IRQn);
@@ -76,6 +82,7 @@ static bool port_init(void *context)
 
 static void port_deinit(void *context)
 {
+    uint32_t mapr;
     (void)context;
     if (port_initialized == 0U) return;
 
@@ -89,6 +96,12 @@ static void port_deinit(void *context)
 
     GPIOA->CRH = (GPIOA->CRH & ~(0xFU << 28)) | (0x4U << 28);
     GPIOB->CRL = (GPIOB->CRL & ~(0xFU << 12)) | (0x4U << 12);
+    if (mapr_saved != 0U) {
+        mapr = AFIO->MAPR;
+        mapr &= ~CS100A_MAPR_FIELDS;
+        AFIO->MAPR = mapr | saved_mapr_fields;
+        mapr_saved = 0U;
+    }
     capture_state = CAPTURE_IDLE;
     port_initialized = 0U;
 }

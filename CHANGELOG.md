@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-08-21
+
+### Added
+- 新增 `Application/Sensors` 应用层，使用静态 `SensorRuntime` 统一管理传感器连接、采样、重连、错误状态和页面退出释放流程。
+- 新增 DHT11、BMP280、CS100A 应用适配器，保留各传感器原始状态码，同时向页面提供统一运行状态。
+- 新增 `Astra/astra/pages/sensor_pages.cpp/.h`，集中管理传感器菜单注册、三级页面绘制和串口日志。
+- 新增 `Hardware/DHT11/dht11_stm32f103.c/.h`，将 PA12、DWT 延时和临界区操作从 DHT11 协议核心中分离。
+
+### Changed
+- DHT11 驱动改为平台无关协议核心加 STM32F103 端口回调，初始化和释放由页面生命周期显式控制。
+- I2C2 总线增加引用计数式 `Acquire/Release` 接口，避免未来多个 I2C 设备之间错误关闭共享总线。
+- CS100A 进入页面时检查 TIM2 是否已被占用，退出时恢复进入前的 AFIO JTAG/TIM2 重映射配置。
+- `astra_rocket.cpp` 仅保留 Astra 启动和主菜单构建，传感器页面实现迁移至独立页面模块。
+
+### Fixed
+- 修复 Distance 页面每次异步采样时在旧距离、`Measuring` 和零值之间切换，导致距离与 Echo 区域按采样频率闪烁的问题。
+- CS100A 后台测量期间保留上一笔有效状态和读数，首次进入页面且尚无结果时仍正常显示 `Measuring`。
+- BMP280 的 I2C 外设初始化失败统一归类为硬件错误；传感器未响应仍归类为 `No Sensor` 并自动重连。
+
+### Verified
+- Keil ARMCC V5.06 全量编译通过，0 Error(s)、0 Warning(s)；资源占用为 Code 41304B、RO-data 4872B、RW-data 240B、ZI-data 17752B。
+- 实机顺序初始化、读取和释放三个传感器成功：DHT11 为 26 C/50%，BMP280 为 27.78 C/96471 Pa，CS100A 为 128 mm。
+- CS100A 状态诊断确认首次测量完成后，后续 `background_start` 保持 `state=ok raw=ok` 和上一笔有效距离；临时诊断代码已删除。
+- STM32CubeProgrammer SWD 下载和校验成功；COM4 硬复位日志确认 `version=v0.4.4`、RAM 17992B/88%、ROM 46416B/71%、Astra 初始化和 FPS 输出正常。
+
+---
+
 ## [0.4.3] - 2026-08-21
 
 ### Added

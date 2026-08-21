@@ -53,13 +53,15 @@ Dev-beta-STM32F103/
 │   ├── SPI/spi.c+h           # SPI1 寄存器级驱动 (18MHz)
 │   ├── DMA/dma.c+h           # DMA1_Ch3 寄存器级驱动 (SPI_Tx)
 │   ├── Timer/timer.c+h       # TIM4 编码器模式驱动 (寄存器级)
-│   └── I2C/i2c.c+h           # I2C2 PB10/PB11 轮询驱动
+│   └── I2C/i2c.c+h           # I2C2 PB10/PB11 轮询驱动 + 引用计数资源管理
+├── Application/
+│   └── Sensors/              # 统一传感器生命周期 + DHT11/BMP280/CS100A 适配器
 ├── Hardware/
 │   ├── LCD/lcd.c+h           # ST7735S 128x160 (SPI+DMA)
 │   ├── LED/led.c+h           # PA11 心跳灯
 │   ├── KEY/key.c+h           # KEY1(PA0) + KEY2(PC13) 按键驱动
 │   ├── Encoder/encoder.c+h   # 编码器旋钮驱动 (A/B/SW)
-│   ├── DHT11/dht11.c+h       # PA12 温湿度传感器单总线驱动
+│   ├── DHT11/                # 可移植单总线协议 + STM32F103 PA12 端口层
 │   ├── BMP280/bmp280.c+h     # 可移植 BMP280 温度/气压驱动
 │   ├── CS100A/               # 可移植超声波驱动 + STM32F103 端口层
 │   └── Watchdog/watchdog.c+h # 独立看门狗与复位原因诊断
@@ -69,12 +71,13 @@ Dev-beta-STM32F103/
 │   │   └── hal_port.h/cpp    # STM32F103 移植层 (1bpp→RGB565 桥接 + 编码器输入)
 │   └── astra/
 │       ├── config/config.h   # UI 配置 (128x160 适配 + 8x16 字体)
+│       ├── pages/            # 传感器页面注册、显示和日志
 │       ├── ui/
 │       │   ├── launcher.h/cpp # 调度器 (页面切换/动画/摄像机)
 │       │   └── element/page/
 │       │       └── item.h/cpp # 菜单/选择器/摄像机类
 │       ├── astra_icons.h      # 菜单磁贴图标数据 (home/gear/info/tool, 32x32 1bpp)
-│       └── astra_rocket.h/cpp # 启动入口 (开机画面 + 菜单树定义 + astraLoop)
+│       └── astra_rocket.h/cpp # 启动入口 (开机画面 + 主菜单树 + astraLoop)
 ├── User/
 │   ├── main.cpp              # C++ 入口 (Astra UI 主循环)
 │   ├── main.h                # 主头文件
@@ -104,13 +107,15 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code 39708B, RO-data 4780B, RW-data 268B, ZI-data 17636B (Keil ARMCC V5.06, MicroLib, v0.4.3)
+**编译资源占用**: Code 41304B, RO-data 4872B, RW-data 240B, ZI-data 17752B (Keil ARMCC V5.06, MicroLib, v0.4.4)
 
 ## 架构说明
 
 ```
 main.cpp (C++)
   └─> astraCoreInit() / astraLoop()  (Astra UI 框架)
+        ├─> sensor_pages.cpp → SensorRuntime → 传感器适配器
+        │                                      └─> 可移植驱动 → MCU 端口/共享总线
         └─> hal_port.cpp (1bpp 虚拟显存 → RGB565 桥接)
              └─> lcd.c (C) → LCD_WriteLine() → SPI/DMA 硬件驱动
 ```
@@ -118,6 +123,9 @@ main.cpp (C++)
 - **Astra UI 框架** 原为 1bpp 单色 OLED 设计，移植层使用 2560 字节 1bpp 虚拟显存，
   canvasUpdate 时逐行转换为 RGB565 并通过 SPI+DMA 推送到 LCD
 - **HAL 抽象层** (`hal.h/cpp`) 定义绘图 API，`hal_port.cpp` 提供具体实现
+- **传感器运行框架** (`Application/Sensors`) 统一连接、采样、重连和资源释放状态；页面只通过适配器访问传感器，详细接入规范见 [`Application/Sensors/README.md`](Application/Sensors/README.md)
+- **传感器硬件层** (`Hardware/<Sensor>`) 保留器件协议和原始错误码，GPIO、定时器及总线操作由独立 MCU 端口层提供
+- **I2C2 共享总线** (`Drivers/I2C`) 使用引用计数管理初始化和释放，防止后续多个 I2C 传感器相互关闭总线
 - **项目级配置** (`app_config.h`) 统一固件版本、目标硬件、显示屏名称和 USART 调试参数，避免多处字符串不一致
 - **独立看门狗** (`watchdog.c`) 标称超时约 4 秒，主循环完成一轮 Astra UI 更新后刷新；启动日志记录复位原因
 - **菜单系统** 支持磁贴页 (TILE) 和列表页 (LIST) 两种风格，摄像机系统实现页面切换动画
@@ -128,4 +136,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.4.3** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.4** | 详见 [CHANGELOG.md](CHANGELOG.md)
