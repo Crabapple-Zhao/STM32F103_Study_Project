@@ -6,6 +6,7 @@
 #include "astra_rocket.h"
 #include "astra_icons.h"
 #include "pages/sensor_pages.h"
+#include "pages/pwm_page.h"
 #include "ui/launcher.h"
 #include "app_config.h"
 #include "app_log.h"
@@ -81,12 +82,12 @@ static void buildMenuTree(void) {
 
   astra::Menu* homeTile = createTile("Home", &icon_home);
   astra::Menu* sensorsTile = createTile("Sensors", &icon_sensors);
-  astra::Menu* aboutTile = createTile("About", &icon_about);
+  astra::Menu* outputTile = createTile("Output", &icon_output);
   toolPage = createTile("Settings", &icon_settings);
 
   rootPage->addItem(homeTile);
   rootPage->addItem(sensorsTile);
-  rootPage->addItem(aboutTile);
+  rootPage->addItem(outputTile);
   rootPage->addItem(toolPage);
 
   addLeaf(homeTile, "-Status");
@@ -95,9 +96,7 @@ static void buildMenuTree(void) {
 
   SensorPages_AddToMenu(sensorsTile);
 
-  addLeaf(aboutTile, "-Astra UI");
-  addLeaf(aboutTile, "-STM32F103");
-  addLeaf(aboutTile, "-ST7735S");
+  PwmPage_AddToMenu(outputTile);
 
   addLeaf(toolPage, "-Brightness");
   addLeaf(toolPage, "-Contrast");

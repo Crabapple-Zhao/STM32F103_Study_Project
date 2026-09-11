@@ -340,7 +340,7 @@
               <MiscControls>--cpp11</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Application\\Sensors;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Drivers\\I2C;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Hardware\\DHT11;..\\Hardware\\BMP280;..\\Hardware\\CS100A;..\\Hardware\\Watchdog;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\Astra\\hal;..\\Astra\\astra;..\\Astra\\astra\\pages;..\\Astra\\astra\\config;..\\Astra\\astra\\ui;..\\Astra\\astra\\ui\\element\\page</IncludePath>
+              <IncludePath>..\\CMSIS\\Include;..\\CMSIS\\Device\\STM32F1xx\\Include;..\\CMSIS\\Device\\STM32F1xx;..\\Startup;..\\User;..\\Application\\Sensors;..\\Drivers\\USART;..\\Drivers\\SPI;..\\Drivers\\DMA;..\\Drivers\\Timer;..\\Drivers\\PWM;..\\Drivers\\I2C;..\\Hardware\\LCD;..\\Hardware\\LED;..\\Hardware\\KEY;..\\Hardware\\Encoder;..\\Hardware\\DHT11;..\\Hardware\\BMP280;..\\Hardware\\CS100A;..\\Hardware\\Watchdog;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc;..\\Drivers\\STM32F1xx_HAL_Driver\\Inc\\Legacy;..\\Drivers\\STM32F1xx_HAL_Driver\\Src;..\\Astra\\hal;..\\Astra\\astra;..\\Astra\\astra\\pages;..\\Astra\\astra\\config;..\\Astra\\astra\\ui;..\\Astra\\astra\\ui\\element\\page</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -499,6 +499,11 @@
               <FileType>1</FileType>
               <FilePath>..\Drivers\I2C\i2c.c</FilePath>
             </File>
+            <File>
+              <FileName>pwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\PWM\pwm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -618,6 +623,11 @@
               <FileName>sensor_pages.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\Astra\astra\pages\sensor_pages.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_page.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\pages\pwm_page.cpp</FilePath>
             </File>
             <File>
               <FileName>launcher.cpp</FileName>

@@ -27,11 +27,10 @@ ICONS_JSON = ROOT / 'Tools' / 'icons' / 'icons.json'
 ICONS_HEADER = ROOT / 'Astra' / 'astra' / 'astra_icons.h'
 PREVIEW_PNG = ROOT / 'tools' / 'icon_preview.png'
 
-# JSON 图标名 -> 头文件数组符号 (about/settings 沿用历史命名 info/tool)
+# JSON 图标名 -> 头文件数组符号 (settings 沿用历史命名 tool)
 SYMBOLS = {
     'home': ('pic_home_data', 'pic_home_selected_data'),
     'sensor': ('pic_sensor_data', 'pic_sensor_selected_data'),
-    'about': ('pic_info_data', None),
     'settings': ('pic_tool_data', None),
 }
 

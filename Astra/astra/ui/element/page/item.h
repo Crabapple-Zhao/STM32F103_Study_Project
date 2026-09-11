@@ -149,6 +149,11 @@ public:
   ContentCallback contentEnter = nullptr;
   ContentCallback contentExit = nullptr;
 
+  //内容页按键回调: 旋钮旋转(CLICK)/短按(KEY_1 PRESS)/长按(KEY_0 PRESS)先交给页面处理
+  //返回 true 表示事件已消费, false 表示走默认导航(如长按返回上级)
+  typedef bool (*ContentKeyHandler)(key::KEY_INDEX, key::KEY_ACTION);
+  ContentKeyHandler contentKeyHandler = nullptr;
+
 public:
   Menu *parent;
   std::vector<Menu *> child;
@@ -158,6 +163,7 @@ public:
   Menu(std::string _title, const Icon *_icon);
   Menu(std::string _title, ContentRenderer _contentRenderer);
   Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback _contentEnter, ContentCallback _contentExit);
+  Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback _contentEnter, ContentCallback _contentExit, ContentKeyHandler _contentKeyHandler);
 
   void init(Vec2 _camera); //每次打开页面都要调用一次
   void deInit(); //每次关闭页面都要调用一次

@@ -128,7 +128,11 @@ void Launcher::update() {
       key::KEY_INDEX idx = static_cast<key::KEY_INDEX>(i);
       key::KEY_ACTION act = HAL::getKeyAction(idx);
       if (act == key::CLICK) {
-        if (num == 0) continue;
+        if (num == 0) {
+          //内容页: 旋转事件交给页面按键回调 (如调占空比), 无回调则忽略
+          if (currentPage->contentKeyHandler != nullptr) currentPage->contentKeyHandler(idx, act);
+          continue;
+        }
         if (i == key::KEY_0) {  //上一个
           if (currentPage->selectIndex > 0) currentPage->selectIndex--;
           else if (getUIConfig().menuLoop) currentPage->selectIndex = num - 1;
@@ -139,6 +143,10 @@ void Launcher::update() {
           selector->go(currentPage->selectIndex);
         }
       } else if (act == key::PRESS) {
+        //内容页: 按键先交给页面处理, 未消费才走默认导航 (长按=返回上级并触发 contentExit)
+        if (currentPage->isContentPage() && currentPage->contentKeyHandler != nullptr) {
+          if (currentPage->contentKeyHandler(idx, act)) continue;
+        }
         if (i == key::KEY_0) close();   //返回上一级
         else if (i == key::KEY_1) open();  //打开选中项
       }

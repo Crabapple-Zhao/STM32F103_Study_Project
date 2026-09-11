@@ -16,6 +16,7 @@
 | 按键 | KEY1=PA0, KEY2=PC13 (高电平按下) |
 | 编码器 | A=PB6, B=PB7, SW=PB5 (TIM4 编码器模式) |
 | 传感器 | DHT11 DATA=PA12；BMP280 I2C2=PB10/PB11；CS100A TRIG=PA15、ECHO=PB3（均在对应页面内访问） |
+| 输出 | PWM TIM3_CH4=PB1（100Hz/1kHz/10kHz/100kHz，Output 菜单） |
 
 ## 引脚
 
@@ -34,6 +35,7 @@
 | PA12 | DHT11 DATA (温湿度传感器单总线) |
 | PA15 | CS100A TRIG (超声波触发输出) |
 | PB3 | CS100A ECHO (TIM2_CH2 输入捕获) |
+| PB1 | PWM OUT (TIM3_CH4，100Hz/1kHz/10kHz/100kHz) |
 | PC13 | KEY2 (按键，下拉输入) |
 | PB5 | ENC SW (编码器按键，上拉输入，低电平按下) |
 | PB6 | ENC A (TIM4_CH1，编码器 A 相) |
@@ -53,6 +55,7 @@ Dev-beta-STM32F103/
 │   ├── SPI/spi.c+h           # SPI1 寄存器级驱动 (18MHz)
 │   ├── DMA/dma.c+h           # DMA1_Ch3 寄存器级驱动 (SPI_Tx)
 │   ├── Timer/timer.c+h       # TIM4 编码器模式驱动 (寄存器级)
+│   ├── PWM/pwm.c+h           # TIM3_CH4 PWM 输出驱动 (预设频率档位, 寄存器级)
 │   └── I2C/i2c.c+h           # I2C2 PB10/PB11 轮询驱动 + 引用计数资源管理
 ├── Application/
 │   └── Sensors/              # 统一传感器生命周期 + DHT11/BMP280/CS100A 适配器
@@ -71,7 +74,7 @@ Dev-beta-STM32F103/
 │   │   └── hal_port.h/cpp    # STM32F103 移植层 (1bpp→RGB565 桥接 + 编码器输入)
 │   └── astra/
 │       ├── config/config.h   # UI 配置 (128x160 适配 + 8x16 字体)
-│       ├── pages/            # 传感器页面注册、显示和日志
+│       ├── pages/            # 传感器页面注册、显示和日志 + PWM 输出页面
 │       ├── ui/
 │       │   ├── launcher.h/cpp # 调度器 (页面切换/动画/摄像机)
 │       │   └── element/page/
@@ -110,7 +113,7 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code 41392B, RO-data 5248B, RW-data 240B, ZI-data 17752B (Keil ARMCC V5.06, MicroLib, v0.4.5)
+**编译资源占用**: Code 43680B, RO-data 5376B, RW-data 264B, ZI-data 17752B (Keil ARMCC V5.06, MicroLib, v0.4.6)
 
 ## 架构说明
 
@@ -129,6 +132,7 @@ main.cpp (C++)
 - **传感器运行框架** (`Application/Sensors`) 统一连接、采样、重连和资源释放状态；页面只通过适配器访问传感器，详细接入规范见 [`Application/Sensors/README.md`](Application/Sensors/README.md)
 - **传感器硬件层** (`Hardware/<Sensor>`) 保留器件协议和原始错误码，GPIO、定时器及总线操作由独立 MCU 端口层提供
 - **I2C2 共享总线** (`Drivers/I2C`) 使用引用计数管理初始化和释放，防止后续多个 I2C 传感器相互关闭总线
+- **PWM 输出** (`Drivers/PWM`) 使用 TIM3_CH4 @ PB1，预设 100Hz/1kHz/10kHz/100kHz 四档频率，进入 Output→PWM-Output 页面时占用、退出释放定时器；占空比精度随频率升高而变粗（100kHz 档为 10%）
 - **项目级配置** (`app_config.h`) 统一固件版本、目标硬件、显示屏名称和 USART 调试参数，避免多处字符串不一致
 - **独立看门狗** (`watchdog.c`) 标称超时约 4 秒，主循环完成一轮 Astra UI 更新后刷新；启动日志记录复位原因
 - **菜单系统** 支持磁贴页 (TILE) 和列表页 (LIST) 两种风格，摄像机系统实现页面切换动画
@@ -141,4 +145,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.4.5** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.6** | 详见 [CHANGELOG.md](CHANGELOG.md)

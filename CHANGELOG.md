@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-09-11
+
+### Added
+- 新增 `Drivers/PWM/pwm.c/h`：TIM3_CH4 @ PB1 PWM 输出驱动，预设 100Hz/1kHz/10kHz/100kHz 四档频率（PSC=71 固定、ARR 随档位变化），占空比 0~100%。
+- 新增 `Astra/astra/pages/pwm_page.cpp/h`：PWM 输出子菜单，`Control` 页面（旋钮调占空比、短按开关输出、实时占空比/电压/进度条）与 `Frequency` 页面（旋钮切换频率档位）。
+- 新增 `Menu::ContentKeyHandler` 内容页按键回调，`Launcher` 将内容页按键事件（旋转/短按/长按）先交给页面处理，未消费才走默认导航（长按返回全局默认不变）。
+
+### Changed
+- 主菜单第三个磁贴由 About 改为 Output，删除原 About 信息项（-Astra UI/-STM32F103/-ST7735S），挂接 PWM-Output 子菜单。
+- 图标资源新增 `icon_output`（复用齿轮点阵），删除 `icon_about`。
+
+### Removed
+- 删除 About 磁贴遗留的信息图标 `pic_info_data` 与 `bmp_info`，同步清理 `Tools/icons/icons.json` 的 about 素材与 `Tools/icon_gen.py` 的 about 符号映射。
+
+### Fixed
+- 修复 PB1 无 PWM 输出的问题：GPIO 配置值 `0x2`（普通推挽输出）误写为 `0xA`（复用推挽输出），导致定时器无法驱动 PB1、始终输出低电平。
+
+### Verified
+- Keil ARMCC V5.06 全量编译通过，0 Error(s)、0 Warning(s)；资源占用 Code 43680B、RO-data 5376B、RW-data 264B、ZI-data 17752B。
+- `icon_gen.py` 校验 home/sensor/settings 资源与头文件逐字节一致，about 素材已移除。
+- STM32CubeProgrammer SWD 下载和校验成功。
+
+---
+
 ## [0.4.5] - 2026-09-11
 
 ### Added

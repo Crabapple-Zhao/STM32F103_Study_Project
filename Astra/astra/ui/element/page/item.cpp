@@ -142,6 +142,25 @@ Menu::Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback
   this->contentRenderer = _contentRenderer;
   this->contentEnter = _contentEnter;
   this->contentExit = _contentExit;
+  this->contentKeyHandler = nullptr;
+}
+
+Menu::Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback _contentEnter, ContentCallback _contentExit, ContentKeyHandler _contentKeyHandler) {
+  this->title = _title;
+  this->selfType = LIST;
+  this->childType = {};
+  this->position.x = astraConfig.listTextMargin;
+  this->position.y = 0;
+  this->position.xTrg = astraConfig.listTextMargin;
+  this->position.yTrg = 0;
+  this->selectIndex = 0;
+  this->parent = nullptr;
+  this->child.clear();
+  this->icon = nullptr;
+  this->contentRenderer = _contentRenderer;
+  this->contentEnter = _contentEnter;
+  this->contentExit = _contentExit;
+  this->contentKeyHandler = _contentKeyHandler;
 }
 
 void Menu::init(Vec2 _camera) {
