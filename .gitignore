@@ -60,6 +60,11 @@ Doc/**/*.jpeg
 read_serial*.ps1
 MDK-ARM/build_log.txt
 MDK-ARM/flash_log.txt
+MDK-ARM/icon_build_log.txt
+MDK-ARM/icon_flash_build.txt
 generate_doc.py
 write_key.py
 keil_config.json
+
+# ---- 追加：图标工具预览产物 ----
+Tools/icon_preview.png

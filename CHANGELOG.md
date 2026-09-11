@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-09-11
+
+### Added
+- 新增 `Astra/astra/astra_icon.h` 图标资源接口：`Bitmap` 自带数据指针、宽高与字节数并提供 `valid()` 长度校验，`Icon` 组合普通图与可选选中图。
+- 新增 Home、Sensor 原生 36x36 选中态图标，避免 30x30 小图非整数放大变形。
+- 新增 `Tools/icons/icons.json` ASCII 点阵素材源与 `Tools/icon_gen.py` 图标工具（校验 / `--write` 生成 / `--preview` 预览），作为素材长期维护入口。
+
+### Changed
+- `Menu` 图标相关 5 个字段（`picData` / `selectedPicData` / 选中宽高 / `picSize`）合并为单个 `const Icon*`，新增磁贴只需绑定一个 Icon 对象。
+- 磁贴渲染源尺寸改从 `Bitmap` 资源读取，与布局配置的显示尺寸解耦，防止修改全局尺寸后旧数组被错误解读；长度失配的资源跳过绘制，防止越界读取。
+- `createTile()` 改为绑定 Icon 并增加启动时资源校验；`root_items` 改为运行时统计实际磁贴数量，增删入口无需同步修改日志。
+- 重绘 Home（圆环）与 Sensor（芯片+波纹）图标，Settings 工具图标移除中心圆点。
+- 调试串口重新枚举为 COM13，同步更新 `app_config.h`、README 与硬件接线表；README 修正启动文件栈堆描述为 Stack=2KB、Heap=12KB。
+
+### Removed
+- 删除无调用点的 `Menu(std::vector<uint8_t>)` 构造器与 `pic` 成员，消除点阵拷入 RAM 的潜在路径。
+- 删除 `tmp/` 下 4 个临时图标脚本与预览图，由 `Tools/icon_gen.py` 取代。
+
+### Verified
+- Keil ARMCC V5.06 全量编译通过，0 Error(s)、0 Warning(s)；资源占用 Code 41392B、RO-data 5248B、RW-data 240B、ZI-data 17752B。
+- `icon_gen.py` 校验 6 组资源 JSON 与头文件逐字节一致，`--write` 生成后解码回读自检通过。
+- STM32CubeProgrammer SWD 下载和校验成功；COM13 硬复位日志确认 `version=v0.4.5`、`root_items=4`、无 `icon resource invalid` 报错，主循环 fps=20 稳定运行。
+- 实机肉眼确认四个磁贴图标显示正常（含 Home/Sensor 36x36 选中态与 About/Settings 放大回退）。
+
+---
+
 ## [0.4.4] - 2026-08-21
 
 ### Added

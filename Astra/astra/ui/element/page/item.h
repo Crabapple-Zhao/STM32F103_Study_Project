@@ -13,6 +13,7 @@
 #include <vector>
 #include "../../../../hal/hal.h"
 #include "../../../../astra/config/config.h"
+#include "../../../astra_icon.h"
 #include <cmath>
 
 namespace astra {
@@ -134,9 +135,8 @@ public:
   PositionForeground positionForeground{};
 
   std::string title;
-  std::vector<uint8_t> pic;
-  const uint8_t *picData = nullptr;
-  uint16_t picSize = 0;
+  //磁贴图标资源: selected 为空时回退为放大普通图
+  const Icon *icon = nullptr;
 
   typedef enum PageType {
     TILE = 0,
@@ -155,8 +155,7 @@ public:
   uint8_t selectIndex;
 
   explicit Menu(std::string _title);
-  Menu(std::string _title, std::vector<uint8_t> _pic);
-  Menu(std::string _title, const uint8_t *_picData, uint16_t _picSize);
+  Menu(std::string _title, const Icon *_icon);
   Menu(std::string _title, ContentRenderer _contentRenderer);
   Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback _contentEnter, ContentCallback _contentExit);
 

@@ -87,43 +87,20 @@ Menu::Menu(std::string _title) {
   this->selectIndex = 0;
   this->parent = nullptr;
   this->child.clear();
-  this->pic.clear();
-  this->picData = nullptr;
-  this->picSize = 0;
+  this->icon = nullptr;
   this->contentRenderer = nullptr;
   this->contentEnter = nullptr;
   this->contentExit = nullptr;
 }
 
-Menu::Menu(std::string _title, std::vector<uint8_t> _pic) {
+Menu::Menu(std::string _title, const Icon *_icon) {
   this->title = _title;
-  this->pic = _pic;
-  this->picData = this->pic.empty() ? nullptr : &this->pic[0];
-  this->picSize = (uint16_t)this->pic.size();
+  this->icon = _icon;
   this->selfType = TILE;
   this->childType = {};
   this->position.x = 0;
   this->position.y = 0;
   this->position.xTrg = 0;  //这里暂时无法计算trg 需要在addItem的时候计算 因为那时候才能拿到所有元素的数量
-  this->position.yTrg = astraConfig.tilePicTopMargin;
-  this->selectIndex = 0;
-  this->parent = nullptr;
-  this->child.clear();
-  this->contentRenderer = nullptr;
-  this->contentEnter = nullptr;
-  this->contentExit = nullptr;
-}
-
-Menu::Menu(std::string _title, const uint8_t *_picData, uint16_t _picSize) {
-  this->title = _title;
-  this->pic.clear();
-  this->picData = _picData;
-  this->picSize = _picSize;
-  this->selfType = TILE;
-  this->childType = {};
-  this->position.x = 0;
-  this->position.y = 0;
-  this->position.xTrg = 0;
   this->position.yTrg = astraConfig.tilePicTopMargin;
   this->selectIndex = 0;
   this->parent = nullptr;
@@ -144,9 +121,7 @@ Menu::Menu(std::string _title, ContentRenderer _contentRenderer) {
   this->selectIndex = 0;
   this->parent = nullptr;
   this->child.clear();
-  this->pic.clear();
-  this->picData = nullptr;
-  this->picSize = 0;
+  this->icon = nullptr;
   this->contentRenderer = _contentRenderer;
   this->contentEnter = nullptr;
   this->contentExit = nullptr;
@@ -163,9 +138,7 @@ Menu::Menu(std::string _title, ContentRenderer _contentRenderer, ContentCallback
   this->selectIndex = 0;
   this->parent = nullptr;
   this->child.clear();
-  this->pic.clear();
-  this->picData = nullptr;
-  this->picSize = 0;
+  this->icon = nullptr;
   this->contentRenderer = _contentRenderer;
   this->contentEnter = _contentEnter;
   this->contentExit = _contentExit;
@@ -241,13 +214,21 @@ void Menu::render(Vec2 _camera) {
       float picH = selected ? astraConfig.tileSelectedPicHeight : astraConfig.tilePicHeight;
       float picX = _iter->position.x - (picW - astraConfig.tilePicWidth) / 2.0f + _camera.x;
       float picY = astraConfig.tilePicTopMargin - (picH - astraConfig.tilePicHeight) / 2.0f + _camera.y;
-      drawScaledBitmap(picX,
-                       picY,
-                       (uint8_t)picW,
-                       (uint8_t)picH,
-                       (uint8_t)astraConfig.tilePicWidth,
-                       (uint8_t)astraConfig.tilePicHeight,
-                       _iter->picData);
+      //源尺寸取自资源自带, 显示尺寸取自布局配置
+      //无独立选中图时回退为放大普通图; 长度不匹配的资源跳过绘制防止越界读取
+      const Bitmap *bmp = nullptr;
+      if (_iter->icon != nullptr) {
+        bmp = (selected && _iter->icon->selected != nullptr) ? _iter->icon->selected : _iter->icon->normal;
+      }
+      if (bmp != nullptr && bmp->valid()) {
+        drawScaledBitmap(picX,
+                         picY,
+                         (uint8_t)picW,
+                         (uint8_t)picH,
+                         bmp->width,
+                         bmp->height,
+                         bmp->data);
+      }
       //这里的xTrg在addItem的时候就已经确定了
       animation(&_iter->position.x, _iter->position.xTrg, astraConfig.tileAnimationSpeed);
     }

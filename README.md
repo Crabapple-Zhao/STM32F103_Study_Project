@@ -11,7 +11,7 @@
 | 显示屏 | 1.8寸 TFT, ST7735S, 128x160, RGB565, SPI+DMA |
 | GUI | Astra UI 轻量级菜单框架 (1bpp 虚拟显存 ~2.5KB RAM) |
 | 接口 | 硬件 SPI1 (18MHz) + DMA1_Ch3, I2C2 (100kHz), USART1 (115200bps) |
-| 调试 | SWD (ST-LINK), USB-UART (COM4) |
+| 调试 | SWD (ST-LINK), USB-UART (COM13) |
 | LED | PA11 心跳灯 (低电平点亮) |
 | 按键 | KEY1=PA0, KEY2=PC13 (高电平按下) |
 | 编码器 | A=PB6, B=PB7, SW=PB5 (TIM4 编码器模式) |
@@ -76,7 +76,8 @@ Dev-beta-STM32F103/
 │       │   ├── launcher.h/cpp # 调度器 (页面切换/动画/摄像机)
 │       │   └── element/page/
 │       │       └── item.h/cpp # 菜单/选择器/摄像机类
-│       ├── astra_icons.h      # 菜单磁贴图标数据 (home/gear/info/tool, 32x32 1bpp)
+│       ├── astra_icon.h       # 图标资源接口 (Bitmap 点阵 + Icon 封装)
+│       ├── astra_icons.h      # 菜单磁贴图标数据 (30x30/36x36 1bpp + Icon 实例)
 │       └── astra_rocket.h/cpp # 启动入口 (开机画面 + 主菜单树 + astraLoop)
 ├── User/
 │   ├── main.cpp              # C++ 入口 (Astra UI 主循环)
@@ -84,8 +85,10 @@ Dev-beta-STM32F103/
 │   ├── app_config.h          # 固件版本/目标硬件/串口等项目级常量
 │   ├── app_log.h             # 轻量级串口日志宏
 │   ├── bsp_init.c+h          # 板级初始化 + 中断处理函数
-├── Startup/startup_stm32f103xb.s  # 启动文件 (Stack=1KB, Heap=4KB)
+├── Startup/startup_stm32f103xb.s  # 启动文件 (Stack=2KB, Heap=12KB)
 ├── MDK-ARM/Project.uvprojx   # Keil MDK-ARM V5 工程 (C++ 模式, --gnu --cpp11)
+├── Tools/icons/icons.json   # 图标素材源 (ASCII 点阵, 修改后用工具生成)
+├── Tools/icon_gen.py         # 图标工具: 校验/生成 astra_icons.h (--write/--preview)
 └── CHANGELOG.md              # 变更记录
 ```
 
@@ -107,7 +110,7 @@ UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
 ```
 
-**编译资源占用**: Code 41304B, RO-data 4872B, RW-data 240B, ZI-data 17752B (Keil ARMCC V5.06, MicroLib, v0.4.4)
+**编译资源占用**: Code 41392B, RO-data 5248B, RW-data 240B, ZI-data 17752B (Keil ARMCC V5.06, MicroLib, v0.4.5)
 
 ## 架构说明
 
@@ -129,6 +132,8 @@ main.cpp (C++)
 - **项目级配置** (`app_config.h`) 统一固件版本、目标硬件、显示屏名称和 USART 调试参数，避免多处字符串不一致
 - **独立看门狗** (`watchdog.c`) 标称超时约 4 秒，主循环完成一轮 Astra UI 更新后刷新；启动日志记录复位原因
 - **菜单系统** 支持磁贴页 (TILE) 和列表页 (LIST) 两种风格，摄像机系统实现页面切换动画
+- **图标资源层** (`astra_icon.h`) 用 `Bitmap`/`Icon` 结构自带宽高与字节数，渲染源尺寸取自资源本身、
+  显示尺寸取自布局配置；选中图为空时自动回退放大普通图，长度失配的资源跳过绘制防止越界
 - **编码器输入** 旋转=上下导航，SW 短按=进入/确认，SW 长按=返回上一级
 - **中断处理函数** (`SysTick_Handler` / `DMA1_Channel3_IRQHandler`) 定义在 `bsp_init.c` 中，
   避免 C++ 名称修饰导致链接器移除
@@ -136,4 +141,4 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.4.4** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.5** | 详见 [CHANGELOG.md](CHANGELOG.md)
