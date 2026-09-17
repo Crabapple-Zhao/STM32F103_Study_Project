@@ -6,6 +6,7 @@
 // 编码器旋钮替代物理按键：旋转=上下导航，SW短按=进入，SW长按=返回。
 //
 #include "hal_port.h"
+#include "../astra/status_bar.h"
 #include "hal.h"
 #include "lcd.h"
 #include "dma.h"
@@ -66,116 +67,14 @@ extern "C" void astraSetStatusBarTitle(const char *title) {
 }
 
 /* ---- 顶部状态栏右侧图标 ---- */
-#define ICON_GAP 2
 #define STATUS_TEXT_W 8
 #define STATUS_TEXT_H 16
-
-typedef struct StatusIcon {
-  const uint8_t *data;
-  uint8_t w;
-  uint8_t h;
-} StatusIcon;
-
-/* 电池 16×10 (横向, 左侧正极凸起, 填充约 80%, 偏右 1px) */
-static const uint8_t icon_battery_bitmap[] = {
-  /* Row 0 */ 0x00, 0x00,
-  /* Row 1: body top (14px, p2~p15) */ 0xFC, 0xFF,
-  /* Row 2: leftmost column clipped */ 0x06, 0x80,
-  /* Row 3: leftmost column clipped */ 0xF6, 0xBF,
-  /* Row 4 */ 0xF6, 0xBF,
-  /* Row 5 */ 0xF6, 0xBF,
-  /* Row 6 */ 0xF6, 0xBF,
-  /* Row 7: leftmost column clipped */ 0x06, 0x80,
-  /* Row 8: body bottom */ 0xFC, 0xFF,
-  /* Row 9 */ 0x00, 0x00,
-};
-static const StatusIcon STATUS_ICON_BATTERY = { icon_battery_bitmap, 16, 10 };
-
-/*
- * WiFi 14x10, locked pixel art.
- * Geometry: two concentric arcs plus one center dot, shifted 1px left.
- * Keep the pixel art fixed unless the status icon is being tuned.
- *
- * Pixel preview (# = on):
- * ..............
- * ........####..
- * .......##.....
- * .....##.......
- * .....#...###..
- * ....#...##....
- * ...##..#......
- * ...#..##....#.
- * ...#..#...##..
- * ...#..#..###..
- */
-static const uint8_t icon_wifi_bitmap[] = {
-  /* Row 0 */ 0x00, 0x00,
-  /* Row 1 */ 0x00, 0x0F,
-  /* Row 2 */ 0x80, 0x01,
-  /* Row 3 */ 0x60, 0x00,
-  /* Row 4 */ 0x20, 0x0E,
-  /* Row 5 */ 0x10, 0x03,
-  /* Row 6 */ 0x98, 0x00,
-  /* Row 7 */ 0xC8, 0x08,
-  /* Row 8 */ 0x48, 0x0C,
-  /* Row 9 */ 0x48, 0x0E,
-};
-static const StatusIcon STATUS_ICON_WIFI = { icon_wifi_bitmap, 14, 10 };
-
-/* TF card 14x10, filled silhouette with clipped upper-right corner and contact slots */
-static const uint8_t icon_tf_bitmap[] = {
-  /* Row 0 */ 0x00, 0x00,
-  /* Row 1 */ 0xFE, 0x03,
-  /* Row 2 */ 0xFE, 0x0F,
-  /* Row 3 */ 0xFE, 0x21,
-  /* Row 4 */ 0xFE, 0x3F,
-  /* Row 5 */ 0xFE, 0x21,
-  /* Row 6 */ 0xFE, 0x3F,
-  /* Row 7 */ 0xFE, 0x21,
-  /* Row 8 */ 0xFE, 0x3F,
-  /* Row 9 */ 0x00, 0x00,
-};
-static const StatusIcon STATUS_ICON_TF = { icon_tf_bitmap, 14, 10 };
-
-static const StatusIcon *const STATUS_ICON_LAYOUT[] = {
-  &STATUS_ICON_BATTERY,
-  &STATUS_ICON_WIFI,
-  &STATUS_ICON_TF,
-};
 
 /* 绘制小型图标到 canvasBuffer (LSB-first, 直接写显存, 支持多字节行宽) */
 static void setCanvasPixelDirect(int x, int y) {
   if (x >= 0 && x < ASTRA_SCREEN_W && y >= 0 && y < ASTRA_SCREEN_H) {
     canvasBuffer[x + (y / 8) * ASTRA_SCREEN_W] |= (1 << (y % 8));
   }
-}
-
-static void drawIcon(int x, int y, const StatusIcon *icon) {
-  int bytesPerRow = (icon->w + 7) / 8;
-  for (int row = 0; row < icon->h; row++) {
-    for (int col = 0; col < icon->w; col++) {
-      int byteIdx = row * bytesPerRow + col / 8;
-      int bitIdx  = col % 8;
-      if (icon->data[byteIdx] & (1 << bitIdx)) {
-        setCanvasPixelDirect(x + col, y + row);
-      }
-    }
-  }
-}
-
-static int drawStatusIconFromRight(int rightX, const StatusIcon *icon) {
-  int x = rightX - icon->w;
-  int y = (STATUS_BAR_H - icon->h) / 2;
-  drawIcon(x, y, icon);
-  return x - ICON_GAP;
-}
-
-static int drawStatusIcons(void) {
-  int iconRight = ASTRA_SCREEN_W - ICON_GAP;
-  for (size_t i = 0; i < sizeof(STATUS_ICON_LAYOUT) / sizeof(STATUS_ICON_LAYOUT[0]); i++) {
-    iconRight = drawStatusIconFromRight(iconRight, STATUS_ICON_LAYOUT[i]);
-  }
-  return iconRight - ICON_GAP;
 }
 
 static void drawStatusChar(int x, int y, char c) {
@@ -199,8 +98,8 @@ static void drawStatusBar() {
     for (int x = 0; x < ASTRA_SCREEN_W; x++) row[x] &= nb;
   }
 
-  /* 2. 右侧静态图标: TF卡 | WiFi | 电池 */
-  int titleRightLimit = drawStatusIcons();
+  /* 2. 独立状态栏模块负责资源、显隐和排列; 此处仅提供像素写入接口 */
+  int titleRightLimit = astra::statusBarDrawIcons(ASTRA_SCREEN_W, STATUS_BAR_H, setCanvasPixelDirect);
 
   /* 3. 画标题文字 (左侧, 保持 8x16 原始大小并垂直居中) */
   {

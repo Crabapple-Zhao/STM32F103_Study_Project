@@ -145,4 +145,6 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.4.6** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.7** | 详见 [CHANGELOG.md](CHANGELOG.md)
+
+顶部状态栏图标已独立为资源、排列与应用接口，未来换图案、增删条目和接入真实设备状态见 [状态栏图标维护](Doc/状态栏图标维护.md)。素材修改后执行 `python Tools/icon_gen.py --status --write --preview`。

@@ -68,3 +68,7 @@ keil_config.json
 
 # ---- 追加：图标工具预览产物 ----
 Tools/icon_preview.png
+Tools/status_icons_preview.png
+Tools/__pycache__/
+Tools/tests/__pycache__/
+MDK-ARM/status_bar_build.txt

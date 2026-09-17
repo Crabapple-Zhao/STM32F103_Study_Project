@@ -207,7 +207,16 @@ def main():
     parser = argparse.ArgumentParser(description='Astra UI 图标素材工具')
     parser.add_argument('--write', action='store_true', help='将 JSON 生成到头文件')
     parser.add_argument('--preview', action='store_true', help='生成预览图')
+    parser.add_argument('--status', action='store_true', help='处理状态栏图标 (白色亮点, 自动生成资源和排列)')
     args = parser.parse_args()
+
+    if args.status:
+        from status_icon_gen import run
+        try:
+            run(args.write, args.preview)
+        except (ValueError, KeyError, TypeError) as error:
+            sys.exit('[FAIL] ' + str(error))
+        return
 
     print(f'素材源: {ICONS_JSON.relative_to(ROOT)}')
     print(f'目标:   {ICONS_HEADER.relative_to(ROOT)}')

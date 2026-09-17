@@ -615,6 +615,11 @@
               <FilePath>..\Astra\hal\hal_port.cpp</FilePath>
             </File>
             <File>
+              <FileName>status_bar.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\status_bar.cpp</FilePath>
+            </File>
+            <File>
               <FileName>astra_rocket.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\Astra\astra\astra_rocket.cpp</FilePath>

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2026-09-17
+
+### Changed
+- 顶部状态栏图标从 HAL 移植层拆分，复用 Bitmap 资源描述；保留原电池/Wi-Fi/TF 卡点阵与默认排列。
+- 新增显隐、替换图案和恢复默认接口；布局预留标题空间，对无效资源、超高与空间不足的图标跳过绘制。
+- 新增状态栏 JSON 素材源及 `icon_gen.py --status` 工具，自动生成点阵、尺寸、默认排列和预览；无需修改 HAL 即可增删、更换图标。
+- Bitmap 校验增加零宽、零高检查。
+
+### Verified
+- 素材迁移逐字节一致；Python 工具测试和 C++ 布局/接口测试通过。
+- Keil 全量编译通过，0 Error(s)、0 Warning(s)；Code 43988B、RO 5384B、RW 336B、ZI 17752B。
+- ST-LINK 烧录和读回校验成功；SWD 读取运行计数递增、FPS=20，实际显存状态栏区域与原版逐像素一致。
+- 用户接回串口后，COM4 / 115200 硬复位日志确认 `version=v0.4.7`、`root_items=4`、Astra 初始化成功；监听期间 FPS=20，无异常复位或错误日志。
+- 用户已复核实屏画面，确认无问题。详见 `Doc/状态栏图标维护.md`。
+
 ## [0.4.6] - 2026-09-11
 
 ### Added

@@ -20,7 +20,8 @@ struct Bitmap {
 
   /* 长度校验: 拦截数组长度与宽高不匹配导致的越界读取 */
   bool valid() const {
-    return data != nullptr && size >= (uint16_t)(((width + 7) / 8) * height);
+    return data != nullptr && width > 0 && height > 0 &&
+           size >= (uint16_t)(((width + 7) / 8) * height);
   }
 };
 
