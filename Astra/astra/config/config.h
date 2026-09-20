@@ -1,7 +1,7 @@
 //
 // Created by Fir on 2024/1/25.
 //
-// 修改：适配 128x160 屏幕 + 8x16 字体
+// UI 风格配置：8x16 字体；屏幕尺寸在 User/display_config.h 中定义
 //
 
 #pragma once
@@ -59,9 +59,9 @@ struct config {
   float tileArrowWidth = 6;
   float tileArrowMargin = 4; //箭头边距
 
-  //适配 128x160 屏幕 + 16px 字体
-  float tileDottedLineBottomMargin = 28; //虚线下边距 (160-28=132)
-  float tileArrowBottomMargin = 8; //箭头下边距 (160-8=152)
+  //相对于 UI 内容区域底部的边距，横屏内容区域高 108px
+  float tileDottedLineBottomMargin = 28; //虚线下边距
+  float tileArrowBottomMargin = 8; //箭头下边距
   float tileTextBottomMargin = 22; //标题下边距
 
   float tileBarHeight = 2; //磁贴进度条高度

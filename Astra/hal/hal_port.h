@@ -32,6 +32,7 @@ typedef struct {
 } AstraMemoryUsage;
 
 void astraGetMemoryUsage(AstraMemoryUsage *usage);
+uint8_t astraGetFps(void);
 
 #ifdef __cplusplus
 }

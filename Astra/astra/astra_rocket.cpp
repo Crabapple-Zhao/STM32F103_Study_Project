@@ -1,12 +1,14 @@
 //
 // Created by Fir on 2024/3/7 007.
-// Port: STM32F103C8T6 + ST7735S 128x160 + rotary encoder.
+// Port: STM32F103C8T6 + ST7735S landscape 160x128 + rotary encoder.
 //
 
 #include "astra_rocket.h"
 #include "astra_icons.h"
 #include "pages/sensor_pages.h"
 #include "pages/pwm_page.h"
+#include "pages/about_page.h"
+#include "pages/display_page.h"
 #include "ui/launcher.h"
 #include "app_config.h"
 #include "app_log.h"
@@ -32,7 +34,7 @@ static size_t asciiLength(const char *text) {
 }
 
 static void drawCenteredText(const char *text, float baselineY) {
-  HAL::drawEnglish((128.0f - (float)(asciiLength(text) * 8)) / 2.0f,
+  HAL::drawEnglish(((float)APP_DISPLAY_WIDTH - (float)(asciiLength(text) * 8)) / 2.0f,
                    baselineY, text);
 }
 
@@ -101,6 +103,8 @@ static void buildMenuTree(void) {
   addLeaf(toolPage, "-Brightness");
   addLeaf(toolPage, "-Contrast");
   addLeaf(toolPage, "-Reset");
+  AboutPage_AddToMenu(toolPage);
+  DisplayPage_AddToMenu(toolPage);
 }
 
 void astraShowBootScreen(void) {

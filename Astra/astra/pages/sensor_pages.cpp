@@ -32,7 +32,7 @@ static size_t asciiLength(const char *text)
 
 static void drawCenteredText(const char *text, float baselineY)
 {
-    HAL::drawEnglish((128.0f - (float)(asciiLength(text) * 8U)) / 2.0f,
+    HAL::drawEnglish(((float)APP_DISPLAY_WIDTH - (float)(asciiLength(text) * 8U)) / 2.0f,
                      baselineY, text);
 }
 
@@ -279,19 +279,20 @@ static void drawDht11Page(void)
                      &loggedConnections, logDht11Connection,
                      logDht11Reading);
 
-    HAL::drawEnglish(28, 34, "Temp/Humi");
-    HAL::drawHLine(10, 42, 108);
+    drawCenteredText("Temp/Humi", 34);
+    HAL::drawHLine((APP_DISPLAY_WIDTH - 108) / 2, 42, 108);
     if (sensorRuntime.state != SENSOR_STATE_READY) {
         drawCenteredText(displayStatus(sensorRuntime.state, "No data"), 78);
         return;
     }
 
-    HAL::drawEnglish(18, 72, "Temp:");
-    drawUInt(66, 72, dht11Sensor.reading.temperature);
-    HAL::drawEnglish(90, 72, "C");
-    HAL::drawEnglish(18, 98, "Humi:");
-    drawUInt(66, 98, dht11Sensor.reading.humidity);
-    HAL::drawEnglish(90, 98, "%");
+    const int offsetX = (APP_DISPLAY_WIDTH - 128) / 2;
+    HAL::drawEnglish(offsetX + 18, 72, "Temp:");
+    drawUInt(offsetX + 66, 72, dht11Sensor.reading.temperature);
+    HAL::drawEnglish(offsetX + 90, 72, "C");
+    HAL::drawEnglish(offsetX + 18, 98, "Humi:");
+    drawUInt(offsetX + 66, 98, dht11Sensor.reading.humidity);
+    HAL::drawEnglish(offsetX + 90, 98, "%");
 }
 
 static void bmp280PageEnter(void)
@@ -319,8 +320,8 @@ static void drawBmp280Page(void)
                      &loggedConnections, logBmp280Connection,
                      logBmp280Reading);
 
-    HAL::drawEnglish(28, 34, "Barometer");
-    HAL::drawHLine(10, 42, 108);
+    drawCenteredText("Barometer", 34);
+    HAL::drawHLine((APP_DISPLAY_WIDTH - 108) / 2, 42, 108);
     if (sensorRuntime.state != SENSOR_STATE_READY) {
         drawCenteredText(displayStatus(sensorRuntime.state, "No data"), 78);
         return;
@@ -359,8 +360,8 @@ static void drawCs100aPage(void)
                      &loggedConnections, logCs100aConnection,
                      logCs100aReading);
 
-    HAL::drawEnglish(32, 34, "Distance");
-    HAL::drawHLine(10, 42, 108);
+    drawCenteredText("Distance", 34);
+    HAL::drawHLine((APP_DISPLAY_WIDTH - 108) / 2, 42, 108);
     if (sensorRuntime.state != SENSOR_STATE_READY) {
         drawCenteredText(displayStatus(sensorRuntime.state, "No Echo"), 78);
         return;

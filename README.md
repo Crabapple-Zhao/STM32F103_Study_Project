@@ -8,10 +8,10 @@
 |------|----------|
 | MCU | STM32F103C8T6 (Cortex-M3, 72MHz, 64KB Flash, 20KB SRAM) |
 | 库 | STM32CubeF1 HAL v1.8.6 (ARMCC V5.06) |
-| 显示屏 | 1.8寸 TFT, ST7735S, 128x160, RGB565, SPI+DMA |
+| 显示屏 | 1.8寸 TFT, ST7735S, 横屏 160x128, RGB565, SPI+DMA，可翻转 180° |
 | GUI | Astra UI 轻量级菜单框架 (1bpp 虚拟显存 ~2.5KB RAM) |
 | 接口 | 硬件 SPI1 (18MHz) + DMA1_Ch3, I2C2 (100kHz), USART1 (115200bps) |
-| 调试 | SWD (ST-LINK), USB-UART (COM13) |
+| 调试 | SWD (ST-LINK), USB-UART (当前 COM4) |
 | LED | PA11 心跳灯 (低电平点亮) |
 | 按键 | KEY1=PA0, KEY2=PC13 (高电平按下) |
 | 编码器 | A=PB6, B=PB7, SW=PB5 (TIM4 编码器模式) |
@@ -60,7 +60,7 @@ Dev-beta-STM32F103/
 ├── Application/
 │   └── Sensors/              # 统一传感器生命周期 + DHT11/BMP280/CS100A 适配器
 ├── Hardware/
-│   ├── LCD/lcd.c+h           # ST7735S 128x160 (SPI+DMA)
+│   ├── LCD/lcd.c+h           # ST7735S 横屏 160x128 (SPI+DMA，支持 180° 翻转)
 │   ├── LED/led.c+h           # PA11 心跳灯
 │   ├── KEY/key.c+h           # KEY1(PA0) + KEY2(PC13) 按键驱动
 │   ├── Encoder/encoder.c+h   # 编码器旋钮驱动 (A/B/SW)
@@ -73,8 +73,8 @@ Dev-beta-STM32F103/
 │   │   ├── hal.h/cpp         # HAL 基类 + 默认实现
 │   │   └── hal_port.h/cpp    # STM32F103 移植层 (1bpp→RGB565 桥接 + 编码器输入)
 │   └── astra/
-│       ├── config/config.h   # UI 配置 (128x160 适配 + 8x16 字体)
-│       ├── pages/            # 传感器页面注册、显示和日志 + PWM 输出页面
+│       ├── config/config.h   # UI 风格配置 (8x16 字体、图标尺寸和间距)
+│       ├── pages/            # 传感器、PWM、About 信息页和 Display 方向设置页
 │       ├── ui/
 │       │   ├── launcher.h/cpp # 调度器 (页面切换/动画/摄像机)
 │       │   └── element/page/
@@ -86,6 +86,7 @@ Dev-beta-STM32F103/
 │   ├── main.cpp              # C++ 入口 (Astra UI 主循环)
 │   ├── main.h                # 主头文件
 │   ├── app_config.h          # 固件版本/目标硬件/串口等项目级常量
+│   ├── display_config.h      # 横屏尺寸、顶部/底部状态栏高度
 │   ├── app_log.h             # 轻量级串口日志宏
 │   ├── bsp_init.c+h          # 板级初始化 + 中断处理函数
 ├── Startup/startup_stm32f103xb.s  # 启动文件 (Stack=2KB, Heap=12KB)
@@ -110,10 +111,10 @@ Dev-beta-STM32F103/
 UV4.exe -b MDK-ARM\Project.uvprojx -j0 -o build_log.txt
 
 # STM32CubeProgrammer SWD 烧录
-STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -rst
+STM32_Programmer_CLI.exe -c port=SWD -d MDK-ARM\Output\DevBeta_STM32F103.hex -v --start -hardRst
 ```
 
-**编译资源占用**: Code 43680B, RO-data 5376B, RW-data 264B, ZI-data 17752B (Keil ARMCC V5.06, MicroLib, v0.4.6)
+**编译资源占用**: Code 44656B, RO-data 5384B, RW-data 344B, ZI-data 17816B (Keil ARMCC V5.06, MicroLib, v0.4.8)
 
 ## 架构说明
 
@@ -145,6 +146,13 @@ main.cpp (C++)
 
 ## 版本
 
-当前: **v0.4.7** | 详见 [CHANGELOG.md](CHANGELOG.md)
+当前: **v0.4.8** | 详见 [CHANGELOG.md](CHANGELOG.md)
+
+## 显示与设置
+
+- 固定横屏 160×128，顶部状态栏保留 20px，底部常驻状态栏隐藏，UI 内容区域为 160×108；字体、图标和动画风格沿用原版。
+- `Settings → About`：显示软件版本、MCU 型号、RAM/ROM 字节数和占比、运行时间及 FPS。RAM 数字包含链接时预留的堆栈，不代表动态堆实时占用；运行时间基于毫秒计数，约 49.7 天回绕。
+- `Settings → Display`：旋转编码器选择 Normal/Flipped，短按确认，长按返回，星号标记生效方向。Flipped 将整个横屏画面旋转 180°；退出页面后保留，断电或复位恢复 Normal，不写入 Flash。
+- About/Display 是独立页面模块，通过 Settings 注册；方向驱动只更改 LCD 的 MADCTL，保持 160×128 和 RGB 色序。
 
 顶部状态栏图标已独立为资源、排列与应用接口，未来换图案、增删条目和接入真实设备状态见 [状态栏图标维护](Doc/状态栏图标维护.md)。素材修改后执行 `python Tools/icon_gen.py --status --write --preview`。

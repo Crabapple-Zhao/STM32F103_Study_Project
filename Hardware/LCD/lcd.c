@@ -24,6 +24,20 @@ static void lcd_cmd(uint8_t c)  { DC_LO(); CS_LO(); SPI1_WriteByte(c); CS_HI(); 
 static void lcd_data8(uint8_t d) { CS_LO(); SPI1_WriteByte(d); CS_HI(); }
 static void lcd_data16(uint16_t d) { CS_LO(); SPI1_WriteByte(d>>8); SPI1_WriteByte(d); CS_HI(); }
 
+static uint8_t lcdFlipped = 0;
+
+void LCD_SetFlipped(uint8_t flipped)
+{
+    flipped = flipped ? 1U : 0U;
+    if (lcdFlipped == flipped) return;
+    /* Keep MV and RGB order; toggling MX/MY rotates landscape by 180 degrees. */
+    lcd_cmd(0x36);
+    lcd_data8(flipped ? 0x60 : 0xA0);
+    lcdFlipped = flipped;
+}
+
+uint8_t LCD_IsFlipped(void) { return lcdFlipped; }
+
 static void lcd_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
     lcd_cmd(0x2A); lcd_data16(x1); lcd_data16(x2);
@@ -59,7 +73,9 @@ void LCD_Init(void)
     lcd_cmd(0xC3); lcd_data8(0x8D); lcd_data8(0x2A);
     lcd_cmd(0xC4); lcd_data8(0x8D); lcd_data8(0xEE);
     lcd_cmd(0xC5); lcd_data8(0x1A);
-    lcd_cmd(0x36); lcd_data8(0xC0);
+    /* MADCTL: MY + MV, landscape 160x128, retain RGB color order. */
+    lcd_cmd(0x36); lcd_data8(0xA0);
+    lcdFlipped = 0;
     lcd_cmd(0xE0);
     lcd_data8(0x04);lcd_data8(0x22);lcd_data8(0x07);lcd_data8(0x0A);
     lcd_data8(0x2E);lcd_data8(0x30);lcd_data8(0x25);lcd_data8(0x2A);
@@ -72,7 +88,7 @@ void LCD_Init(void)
     lcd_data8(0x00);lcd_data8(0x01);lcd_data8(0x04);lcd_data8(0x13);
     lcd_cmd(0x3A); lcd_data8(0x05);
     /* display on 之前先清屏, 避免软复位后 LCD GRAM 残留上次画面 (如主页) 被短暂显示 */
-    LCD_Fill(0, 0, 127, 159, 0x0000);
+    LCD_Fill(0, 0, LCD_W - 1, LCD_H - 1, 0x0000);
     lcd_cmd(0x29);
 }
 

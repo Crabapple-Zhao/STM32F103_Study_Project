@@ -76,27 +76,32 @@ def generate(doc):
 def preview(doc):
     from PIL import Image, ImageDraw
     resources = validate(doc)
-    bar = Image.new('RGB', (128, 20), 'black')
-    right = 126
+    config = (ROOT / 'User/display_config.h').read_text(encoding='utf-8')
+    def dimension(name):
+        return int(re.search(r'^#define\s+' + name + r'\s+(\d+)\s*$', config, re.M)[1])
+    bar_width = dimension('APP_DISPLAY_WIDTH')
+    bar_height = dimension('APP_TOP_BAR_HEIGHT')
+    bar = Image.new('RGB', (bar_width, bar_height), 'black')
+    right = bar_width - 2
     for entry in doc['layout']:
         rows = resources[entry['bitmap']]
         width, height = len(rows[0]), len(rows)
         x = right - width
-        if not entry['visible'] or height > 19 or x - 4 < 32:
+        if not entry['visible'] or height > bar_height - 1 or x - 4 < 32:
             continue
         for y, row in enumerate(rows):
             for col, value in enumerate(row):
                 if value == '#':
-                    bar.putpixel((x + col, (20-height)//2+y), (255,255,255))
+                    bar.putpixel((x + col, (bar_height-height)//2+y), (255,255,255))
         right = x - 2
-    ImageDraw.Draw(bar).line((0,19,127,19), fill='white')
+    ImageDraw.Draw(bar).line((0,bar_height-1,bar_width-1,bar_height-1), fill='white')
     scale = 6
-    sheet = Image.new('RGB', (800, 190+len(resources)*160), '#202020')
+    sheet = Image.new('RGB', (max(800,bar_width*scale+32), 70+bar_height*scale+len(resources)*160), '#202020')
     draw = ImageDraw.Draw(sheet)
     draw.text((16,12), 'Status bar layout (6x; title omitted)', fill='white')
-    sheet.paste(bar.resize((768,120), Image.Resampling.NEAREST), (16,36))
+    sheet.paste(bar.resize((bar_width*scale,bar_height*scale), Image.Resampling.NEAREST), (16,36))
     for index,(name,rows) in enumerate(resources.items()):
-        top=180+index*160
+        top=60+bar_height*scale+index*160
         draw.text((16,top), f'{name} {len(rows[0])}x{len(rows)} (8x)', fill='white')
         im=Image.new('RGB',(len(rows[0]),len(rows)),'black')
         for y,row in enumerate(rows):

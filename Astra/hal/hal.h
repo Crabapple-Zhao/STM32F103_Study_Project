@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 #include "../astra/config/config.h"
+#include "display_config.h"
 
 namespace oled {
 
@@ -45,8 +46,8 @@ namespace led {
 
 namespace sys {
 struct config {
-  uint8_t screenWeight = 128;
-  uint8_t screenHeight = 108;  // 160 - 20 (顶部状态栏) - 32 (底部状态栏), UI 内容区域
+  uint8_t screenWeight = APP_DISPLAY_WIDTH;
+  uint8_t screenHeight = APP_UI_HEIGHT;
   float screenBright = 255;
   //todo place other param of system
 };

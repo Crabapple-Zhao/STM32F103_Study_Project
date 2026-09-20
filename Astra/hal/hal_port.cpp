@@ -1,7 +1,7 @@
 ﻿//
-// HAL 移植实现 — Astra UI → STM32F103C8T6 + ST7735S (128x160 RGB565)
+// HAL 移植实现 — Astra UI → STM32F103C8T6 + ST7735S (160x128 RGB565)
 //
-// 核心策略：使用 1bpp 虚拟显存 (128*160/8 = 2560 字节)，
+// 核心策略：使用 1bpp 虚拟显存 (160*128/8 = 2560 字节)，
 // canvasUpdate 时逐行转换为 RGB565 并通过 SPI+DMA 推送到 LCD。
 // 编码器旋钮替代物理按键：旋转=上下导航，SW短按=进入，SW长按=返回。
 //
@@ -22,13 +22,13 @@
 
 /* ---- 1bpp 虚拟显存 ---- */
 /* 格式与 SSD1306 一致: byte_index = x + (y/8)*width, bit = 1<<(y%8) */
-#define ASTRA_SCREEN_W  128
-#define ASTRA_SCREEN_H  160
+#define ASTRA_SCREEN_W  APP_DISPLAY_WIDTH
+#define ASTRA_SCREEN_H  APP_DISPLAY_HEIGHT
 #define ASTRA_BUF_SIZE  (ASTRA_SCREEN_W * ASTRA_SCREEN_H / 8)  /* 2560 字节 */
 
 static uint8_t canvasBuffer[ASTRA_BUF_SIZE];
 
-/* RGB565 行缓冲 (128 像素 * 2 字节 = 256 字节, static 供 DMA) */
+/* RGB565 行缓冲 (160 像素 * 2 字节 = 320 字节, static 供 DMA) */
 static uint8_t lineBuf[ASTRA_SCREEN_W * 2];
 
 /* 前景色 (1bpp=1) 和背景色 (1bpp=0) 的 RGB565 值 */
@@ -36,16 +36,18 @@ static uint8_t lineBuf[ASTRA_SCREEN_W * 2];
 #define BG_COLOR  0x0000  /* 黑色 */
 
 /* ---- 状态栏 ---- */
-#define STATUS_BAR_H   20   /* 顶部状态栏高度 (像素) */
-#define BOTTOM_BAR_H   32   /* 底部状态栏高度 (像素, 顶部的 2 倍) */
+#define STATUS_BAR_H   APP_TOP_BAR_HEIGHT
+#define BOTTOM_BAR_H   APP_BOTTOM_BAR_HEIGHT
 #define UI_OFFSET_Y    STATUS_BAR_H   /* UI 内容在 canvasBuffer 中的 y 偏移 (避开顶部状态栏) */
 #define UI_MAX_Y       (ASTRA_SCREEN_H - BOTTOM_BAR_H)  /* UI 内容最大 y 坐标 = 128, 避开底部状态栏 */
 static char statusBarTitle[20] = {0};  /* 顶部状态栏标题文本 */
 
-/* ---- 底部状态栏 FPS 计算 ---- */
+/* ---- 刷屏 FPS 统计，供 About 页面和可选底部状态栏读取 ---- */
 static uint32_t fpsLastTick = 0;
 static uint32_t fpsFrameCount = 0;
 static uint8_t  currentFps = 0;
+
+extern "C" uint8_t astraGetFps(void) { return currentFps; }
 
 /* 开机动画标志 — 置 true 时跳过状态栏绘制 */
 bool bootScreenActive = false;
@@ -231,9 +233,9 @@ static void buildFpsText(char *buf) {
   }
 }
 
-/* 在 canvasBuffer 底部绘制状态栏 (y=UI_MAX_Y ~ ASTRA_SCREEN_H-1, 32px 高) */
+/* 可选的旧底部状态栏，当前高度为 0，不调用此函数。恢复时需预留 32px。 */
 static void drawBottomStatusBar() {
-  /* 1. 清除底部状态栏区域 (y=128~159) */
+  /* 1. 清除预留的底部状态栏区域 */
   for (int y = UI_MAX_Y; y < ASTRA_SCREEN_H; y++) {
     uint8_t *row = &canvasBuffer[(y / 8) * ASTRA_SCREEN_W];
     uint8_t bit = 1 << (y % 8);
@@ -279,14 +281,14 @@ public:
 
   /* ---- 画布缓冲 ---- */
   void *_getCanvasBuffer() { return canvasBuffer; }
-  uint8_t _getBufferTileHeight() { return ASTRA_SCREEN_H / 8; }  /* 20 */
-  uint8_t _getBufferTileWidth() { return ASTRA_SCREEN_W; }       /* 128 */
+  uint8_t _getBufferTileHeight() { return ASTRA_SCREEN_H / 8; }  /* 16 pages */
+  uint8_t _getBufferTileWidth() { return ASTRA_SCREEN_W; }       /* 160 pixels */
 
   /* ---- 画布刷新: 1bpp → RGB565 → LCD (流式写入, 单次窗口设置) ---- */
   void _canvasUpdate() {
     if (!bootScreenActive) {
       drawStatusBar();
-      drawBottomStatusBar();
+      if (BOTTOM_BAR_H > 0) drawBottomStatusBar();
     }
 
     /* FPS 计算 (基于 canvasUpdate 调用次数) */

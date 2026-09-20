@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] - 2026-09-20
+
+### Added
+- 设置菜单新增 About，显示软件版本、MCU 型号、RAM/ROM 链接占用、运行时间和 FPS。
+- 设置菜单新增 Display，可选择 Normal 或 Flipped，将横屏上下翻转 180°；短按应用、长按返回，重启恢复 Normal。
+- 新增统一显示配置 `User/display_config.h`，集中管理屏幕尺寸和状态栏高度。
+
+### Changed
+- 屏幕改为 160×128 横屏，保留顶部 20 像素状态栏，内容区为 160×108；隐藏底部常驻信息栏，相关信息移至 About。
+- 传感器、PWM 页面和启动文字按横屏宽度居中；保留现有图标和页面样式。
+- 状态栏预览工具从显示配置读取尺寸；同步 README、硬件接线表、状态栏维护说明和 COM4 调试信息。
+- 固件版本更新为用户指定的 v0.4.8。
+
+### Verified
+- Keil 全量编译通过，0 Error(s)、0 Warning(s)；Code 44656B、RO 5384B、RW 344B、ZI 17816B。
+- 主菜单与状态栏图标资源校验通过，状态栏生成工具 4 项 Python 测试通过。
+- ST-LINK 下载、读回校验和复位启动成功；COM4 / 115200 启动日志确认 `version=v0.4.8`、`lcd=ST7735S_160x128`、`root_items=4`，Astra 初始化成功。
+- 串口报告 RAM 18160B（89%）、ROM 50384B（77%）；RAM 为链接占用，包含预留堆栈。
+
 ## [0.4.7] - 2026-09-17
 
 ### Changed

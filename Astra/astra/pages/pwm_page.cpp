@@ -29,7 +29,7 @@ static size_t asciiLength(const char *text)
 
 static void drawCenteredText(const char *text, float baselineY)
 {
-    HAL::drawEnglish((128.0f - (float)(asciiLength(text) * 8U)) / 2.0f,
+    HAL::drawEnglish(((float)APP_DISPLAY_WIDTH - (float)(asciiLength(text) * 8U)) / 2.0f,
                      baselineY, text);
 }
 
@@ -138,7 +138,7 @@ static bool controlKey(key::KEY_INDEX idx, key::KEY_ACTION act)
 static void drawControl(void)
 {
     drawCenteredText("PWM Control", 34);
-    HAL::drawHLine(10, 42, 108);
+    HAL::drawHLine((APP_DISPLAY_WIDTH - 108) / 2, 42, 108);
 
     drawCenteredText(pwmRunning ? "Output: ON" : "Output: OFF", 58);
 
@@ -152,8 +152,8 @@ static void drawControl(void)
     drawCenteredText(dutyBuf, 76);
 
     /* 占空比实时进度条: 外框 100px, 内部按比例填充 */
-    HAL::drawFrame(14, 80, 100, 8);
-    HAL::drawBox(16, 82, (float)((uint32_t)96U * pwmDuty / 100U), 4);
+    HAL::drawFrame((APP_DISPLAY_WIDTH - 100) / 2, 80, 100, 8);
+    HAL::drawBox((APP_DISPLAY_WIDTH - 96) / 2, 82, (float)((uint32_t)96U * pwmDuty / 100U), 4);
 
     /* 平均电压 / 最大电压 / 当前频率 */
     char voltBuf[28];
@@ -200,7 +200,7 @@ static bool freqKey(key::KEY_INDEX idx, key::KEY_ACTION act)
 static void drawFreq(void)
 {
     drawCenteredText("Frequency", 24);
-    HAL::drawHLine(10, 32, 108);
+    HAL::drawHLine((APP_DISPLAY_WIDTH - 108) / 2, 32, 108);
 
     for (uint8_t i = 0; i < PWM_FREQ_NUM; i++) {
         char buf[16];

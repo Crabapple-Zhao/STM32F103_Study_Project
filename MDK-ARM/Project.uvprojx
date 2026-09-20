@@ -615,6 +615,16 @@
               <FilePath>..\Astra\hal\hal_port.cpp</FilePath>
             </File>
             <File>
+              <FileName>display_page.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\pages\display_page.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>about_page.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Astra\astra\pages\about_page.cpp</FilePath>
+            </File>
+            <File>
               <FileName>status_bar.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\Astra\astra\status_bar.cpp</FilePath>

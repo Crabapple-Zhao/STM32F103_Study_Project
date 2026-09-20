@@ -1,15 +1,16 @@
 /**
  * @file    lcd.h
- * @brief   1.8寸 TFT-LCD (ST7735S, 128x160) 驱动头文件
+ * @brief   1.8寸 TFT-LCD (ST7735S, 横屏 160x128) 驱动头文件
  * @note    PA5=SCK(SPI1), PA7=MOSI(SPI1), PA4=BLK, PA1=CS, PA2=RST, PA3=DC
  */
 #ifndef __LCD_H
 #define __LCD_H
 
 #include "stm32f1xx_hal.h"
+#include "display_config.h"
 
-#define LCD_W  128
-#define LCD_H  160
+#define LCD_W  APP_DISPLAY_WIDTH
+#define LCD_H  APP_DISPLAY_HEIGHT
 
 /* ---- 颜色 (RGB565) ---- */
 #define COLOR_WHITE   0xFFFF
@@ -26,6 +27,9 @@ extern "C" {
 #endif
 
 void LCD_Init(void);
+/* Both orientations are 160x128 landscape. Main loop only, between frames. */
+void LCD_SetFlipped(uint8_t flipped);
+uint8_t LCD_IsFlipped(void);
 void LCD_Fill(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 void LCD_DrawPoint(uint16_t x, uint16_t y, uint16_t color);
 void LCD_DrawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
